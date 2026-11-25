@@ -6,6 +6,14 @@ username = access key id; secrets {"secret_access_key": "..."}.
 Options: {"regions": ["us-east-1"], "account_name": "Example", "product_name": "Infrastructure",
           "stopped_days": 30, "key_age_days": 90, "security_hub": true, "guardduty": true, "inspector": true}
 
+Other ways to sign in (all read-only, nothing is written to AWS):
+- Temporary credentials: add the secret ``session_token`` next to the key pair.
+- No key at all: leave the user name and the secret blank and the server's own identity is used (instance profile,
+  task role, environment), through the usual AWS credential chain.
+- Another account: option ``role_arn`` (and ``external_id`` when the role asks for one). The identity above assumes
+  that role for each run and reads with it; the role needs SecurityAudit + ViewOnlyAccess and must trust the
+  identity. One connector for each account covers an organisation from one central identity.
+
 Checks (each records a finding that closes automatically when fixed):
   IAM: root MFA / root access keys, console users without MFA, stale access keys, password policy
   Logging & detection: multi-region CloudTrail, GuardDuty, VPC flow logs, Security Hub
@@ -37,7 +45,8 @@ def _name(tags, default):
 @register
 class AWSConnector(BaseConnector):
     kind = "aws"
-    secret_fields = ("secret_access_key",)
+    secret_fields = ("secret_access_key", "session_token")
+    _role = None  # credentials of the assumed role, kept for the run
 
     def _session(self, region=None):
         try:
@@ -45,8 +54,30 @@ class AWSConnector(BaseConnector):
         except ImportError as e:
             msg = "boto3 is not installed"
             raise ConnectorError(msg) from e
-        return boto3.session.Session(aws_access_key_id=self.connector.username, aws_secret_access_key=self.secrets.get("secret_access_key", ""),
-                                     region_name=region or self.regions[0])
+        region = region or self.regions[0]
+        key = (self.connector.username or "").strip()
+        if key:
+            own = boto3.session.Session(aws_access_key_id=key, aws_secret_access_key=self.secrets.get("secret_access_key", ""),
+                                        aws_session_token=self.secrets.get("session_token") or None, region_name=region)
+        else:
+            own = boto3.session.Session(region_name=region)  # the server's own identity
+        arn = (self.options.get("role_arn") or "").strip()
+        if not arn:
+            return own
+        now = datetime.datetime.now(datetime.UTC)
+        if not self._role or self._role["Expiration"] - now < datetime.timedelta(minutes=5):
+            kw = {"RoleArn": arn, "RoleSessionName": "orasec-connector", "DurationSeconds": 3600}
+            if self.options.get("external_id"):
+                kw["ExternalId"] = str(self.options["external_id"])
+            try:
+                self._role = own.client("sts").assume_role(**kw)["Credentials"]
+            except Exception as e:
+                self.log.append(f"sts.assume_role -> {e.__class__.__name__}")
+                msg = f"The role {arn} could not be assumed: {e.__class__.__name__}: {str(e)[:200]}"
+                raise ConnectorError(msg) from e
+            self.log.append("sts.assume_role -> ok")
+        return boto3.session.Session(aws_access_key_id=self._role["AccessKeyId"], aws_secret_access_key=self._role["SecretAccessKey"],
+                                     aws_session_token=self._role["SessionToken"], region_name=region)
 
     @property
     def regions(self):

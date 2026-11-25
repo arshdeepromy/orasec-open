@@ -61,6 +61,39 @@ env = environ.FileAwareEnv(
     ORASEC_OIDC_SESSION_HOURS=(float, 12.0),
     ORASEC_OIDC_TRUST_UNVERIFIED_EMAIL=(bool, False),
     ORASEC_OIDC_BUTTON_TEXT=(str, "Sign in with SSO"),
+    # Microsoft Entra ID sign-in (v2.0 endpoint). TENANT_ID: the directory (tenant) id or a verified domain. For a
+    # multi-tenant registration ("common", "organizations") ALLOWED_TENANTS is required: tenant ids, comma separated.
+    # ALLOWED_GROUP: a group object id or an app role value; blank lets every person with an OraSec account in.
+    ORASEC_ENTRA_ENABLED=(bool, False),
+    ORASEC_ENTRA_TENANT_ID=(str, ""),
+    ORASEC_ENTRA_CLIENT_ID=(str, ""),
+    ORASEC_ENTRA_CLIENT_SECRET=(str, ""),
+    ORASEC_ENTRA_ALLOWED_TENANTS=(str, ""),
+    ORASEC_ENTRA_ALLOWED_GROUP=(str, ""),
+    ORASEC_ENTRA_REDIRECT_URI=(str, ""),  # e.g. https://orasec.example.com/sso/entra/callback/
+    ORASEC_ENTRA_BUTTON_TEXT=(str, "Sign in with Microsoft"),
+    # Okta sign-in. DOMAIN: example.okta.com (not the -admin host). AUTH_SERVER: "default", "org", or the id of a
+    # custom authorization server; it must match the app registration because it changes the issuer.
+    ORASEC_OKTA_ENABLED=(bool, False),
+    ORASEC_OKTA_DOMAIN=(str, ""),
+    ORASEC_OKTA_AUTH_SERVER=(str, "default"),
+    ORASEC_OKTA_CLIENT_ID=(str, ""),
+    ORASEC_OKTA_CLIENT_SECRET=(str, ""),
+    ORASEC_OKTA_ALLOWED_GROUP=(str, ""),
+    ORASEC_OKTA_REDIRECT_URI=(str, ""),  # e.g. https://orasec.example.com/sso/okta/callback/
+    ORASEC_OKTA_BUTTON_TEXT=(str, "Sign in with Okta"),
+    # Active Directory sign-in on the normal login form (orasec.sso.ldap). The password is checked by the domain
+    # controller over LDAPS (or StartTLS when USE_SSL is off); it is never sent in clear text. BIND_DN is a read-only
+    # service account. ALLOWED_GROUP: a group name (CN) or DN; blank lets every person with an OraSec account in.
+    ORASEC_LDAP_ENABLED=(bool, False),
+    ORASEC_LDAP_HOST=(str, ""),
+    ORASEC_LDAP_PORT=(int, 0),  # 0: 636 with LDAPS, 389 with StartTLS
+    ORASEC_LDAP_USE_SSL=(bool, True),
+    ORASEC_LDAP_CA_CERTS=(str, ""),  # CA bundle for a private certificate authority
+    ORASEC_LDAP_BASE_DN=(str, ""),
+    ORASEC_LDAP_BIND_DN=(str, ""),
+    ORASEC_LDAP_BIND_PASSWORD=(str, ""),
+    ORASEC_LDAP_ALLOWED_GROUP=(str, ""),
     # Push notifications of the mobile app (orasec.mobile.push). Off by default. The two key files are mounted into
     # the container and are never in git: the Firebase service account (Android) and the Apple key (iPhone, iPad).
     # Names must not end in _FILE: docker/secret-file-loader.sh replaces every ORASEC_*_FILE variable by the content
@@ -663,6 +696,34 @@ ORASEC_OIDC_ALLOWED_GROUP = env("ORASEC_OIDC_ALLOWED_GROUP")
 ORASEC_OIDC_SESSION_HOURS = env("ORASEC_OIDC_SESSION_HOURS")
 ORASEC_OIDC_TRUST_UNVERIFIED_EMAIL = env("ORASEC_OIDC_TRUST_UNVERIFIED_EMAIL")
 ORASEC_OIDC_BUTTON_TEXT = env("ORASEC_OIDC_BUTTON_TEXT")
+ORASEC_ENTRA_ENABLED = env("ORASEC_ENTRA_ENABLED")
+ORASEC_ENTRA_TENANT_ID = env("ORASEC_ENTRA_TENANT_ID")
+ORASEC_ENTRA_CLIENT_ID = env("ORASEC_ENTRA_CLIENT_ID")
+ORASEC_ENTRA_CLIENT_SECRET = env("ORASEC_ENTRA_CLIENT_SECRET")
+ORASEC_ENTRA_ALLOWED_TENANTS = env("ORASEC_ENTRA_ALLOWED_TENANTS")
+ORASEC_ENTRA_ALLOWED_GROUP = env("ORASEC_ENTRA_ALLOWED_GROUP")
+ORASEC_ENTRA_REDIRECT_URI = env("ORASEC_ENTRA_REDIRECT_URI")
+ORASEC_ENTRA_BUTTON_TEXT = env("ORASEC_ENTRA_BUTTON_TEXT")
+ORASEC_OKTA_ENABLED = env("ORASEC_OKTA_ENABLED")
+ORASEC_OKTA_DOMAIN = env("ORASEC_OKTA_DOMAIN")
+ORASEC_OKTA_AUTH_SERVER = env("ORASEC_OKTA_AUTH_SERVER")
+ORASEC_OKTA_CLIENT_ID = env("ORASEC_OKTA_CLIENT_ID")
+ORASEC_OKTA_CLIENT_SECRET = env("ORASEC_OKTA_CLIENT_SECRET")
+ORASEC_OKTA_ALLOWED_GROUP = env("ORASEC_OKTA_ALLOWED_GROUP")
+ORASEC_OKTA_REDIRECT_URI = env("ORASEC_OKTA_REDIRECT_URI")
+ORASEC_OKTA_BUTTON_TEXT = env("ORASEC_OKTA_BUTTON_TEXT")
+ORASEC_LDAP_ENABLED = env("ORASEC_LDAP_ENABLED")
+ORASEC_LDAP_HOST = env("ORASEC_LDAP_HOST")
+ORASEC_LDAP_PORT = env("ORASEC_LDAP_PORT")
+ORASEC_LDAP_USE_SSL = env("ORASEC_LDAP_USE_SSL")
+ORASEC_LDAP_CA_CERTS = env("ORASEC_LDAP_CA_CERTS")
+ORASEC_LDAP_BASE_DN = env("ORASEC_LDAP_BASE_DN")
+ORASEC_LDAP_BIND_DN = env("ORASEC_LDAP_BIND_DN")
+ORASEC_LDAP_BIND_PASSWORD = env("ORASEC_LDAP_BIND_PASSWORD")
+ORASEC_LDAP_ALLOWED_GROUP = env("ORASEC_LDAP_ALLOWED_GROUP")
+if ORASEC_LDAP_ENABLED:
+    # after the local accounts: break-glass keeps working when the domain controller cannot be reached
+    AUTHENTICATION_BACKENDS = (*AUTHENTICATION_BACKENDS, "orasec.sso.ldap.LDAPBackend")
 # Push notifications of the mobile app (orasec.mobile.push)
 ORASEC_PUSH_ENABLED = env("ORASEC_PUSH_ENABLED")
 ORASEC_PUSH_FCM_CREDENTIALS = env("ORASEC_PUSH_FCM_CREDENTIALS")
@@ -709,6 +770,7 @@ LOGIN_EXEMPT_URLS = (
     rf"^{URL_PREFIX}mcp/?$",  # connector endpoint: checks the bearer token itself and answers 401 (orasec.mcp)
     rf"^{URL_PREFIX}\.well-known/oauth-protected-resource",  # public sign-in metadata of the connector endpoint
     rf"^{URL_PREFIX}sso/(login|callback|backchannel-logout)/?$",  # SSO (orasec.sso)  # policy tool webhook: checks its own secret token (posture.isms_views.webhook)
+    rf"^{URL_PREFIX}sso/(entra|okta)/(login|callback)/?$",  # Microsoft Entra ID and Okta sign-in (orasec.sso.providers)
     r"complete/",
     r"empty_questionnaire/([\d]+)/answer",
     r"oauth2/idpresponse",
@@ -1356,6 +1418,9 @@ HASHCODE_FIELDS_PER_SCANNER = {
     "OraSec GitHub": ["title", "component_name"],
     "OraSec Cloudflare": ["title", "component_name"],
     "OraSec AWS": ["title", "component_name"],
+    "OraSec Plerion": ["title", "component_name"],
+    "OraSec Tenable": ["title", "component_name"],
+    "OraSec Check Point": ["title", "component_name"],
     # In checkmarx, same CWE may appear with different severities: example "sql injection" (high) and "blind sql injection" (low).
     # Including the severity in the hash_code keeps those findings not duplicate
     "Anchore Engine Scan": ["title", "severity", "component_name", "component_version", "file_path"],
@@ -1843,6 +1908,9 @@ DEDUPLICATION_ALGORITHM_PER_PARSER = {
     "OraSec GitHub": DEDUPE_ALGO_UNIQUE_ID_FROM_TOOL,
     "OraSec Cloudflare": DEDUPE_ALGO_UNIQUE_ID_FROM_TOOL,
     "OraSec AWS": DEDUPE_ALGO_UNIQUE_ID_FROM_TOOL,
+    "OraSec Plerion": DEDUPE_ALGO_UNIQUE_ID_FROM_TOOL,
+    "OraSec Tenable": DEDUPE_ALGO_UNIQUE_ID_FROM_TOOL,
+    "OraSec Check Point": DEDUPE_ALGO_UNIQUE_ID_FROM_TOOL,
     "Composer Audit Scan": DEDUPE_ALGO_HASH_CODE,
     "pnpm Audit Scan": DEDUPE_ALGO_HASH_CODE,
     "Dotnet Vulnerable Packages Scan": DEDUPE_ALGO_HASH_CODE,

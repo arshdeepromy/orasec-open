@@ -173,7 +173,9 @@ def connector_edit(request, cid=None):
         c = form.save()
         messages.success(request, f"Connector '{c.name}' saved.")
         return redirect("orasec_connector_detail", cid=c.id)
-    return render(request, "orasec/posture/connector_form.html", {"form": form, "obj": obj, "kinds": Connector.KIND_CHOICES})
+    # "kind" is worked out here: in a template, ``x|default:request.GET.kind`` raises when the address has no ?kind=
+    kind = form.instance.kind or request.GET.get("kind") or ""
+    return render(request, "orasec/posture/connector_form.html", {"form": form, "obj": obj, "kinds": Connector.KIND_CHOICES, "kind": kind})
 
 
 @login_required

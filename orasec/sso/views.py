@@ -14,15 +14,20 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from orasec.sso import oidc
+from orasec.sso import oidc, providers
 
 logger = logging.getLogger(__name__)
 SSO_BACKEND = "django.contrib.auth.backends.ModelBackend"
 
 
-def _redirect_uri(request):
+def _redirect_uri(request, provider=providers.GENERIC):
     # Behind Cloudflare/nginx the request looks like plain http, so production pins the exact URL.
-    return settings.ORASEC_OIDC_REDIRECT_URI or request.build_absolute_uri(reverse("oidc_callback"))
+    p = providers.get(provider)
+    if p and p.redirect_uri:
+        return p.redirect_uri
+    if provider == providers.GENERIC:
+        return request.build_absolute_uri(reverse("oidc_callback"))
+    return request.build_absolute_uri(reverse("oidc_provider_callback", args=[provider]))
 
 
 def _fail(request, why, log_reason):
@@ -32,14 +37,14 @@ def _fail(request, why, log_reason):
 
 
 @never_cache
-def oidc_login(request):
-    if not oidc.enabled():
+def oidc_login(request, provider=providers.GENERIC):
+    if not oidc.enabled(provider):
         return redirect(settings.LOGIN_URL)
     nxt = request.GET.get("next") or settings.LOGIN_REDIRECT_URL
     if not url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
         nxt = settings.LOGIN_REDIRECT_URL
     try:
-        return redirect(oidc.start(request, _redirect_uri(request), nxt))
+        return redirect(oidc.start(request, _redirect_uri(request, provider), nxt, provider))
     except Exception as e:  # noqa: BLE001 - provider down: fall back to the local form
         logger.warning("sso: cannot reach the identity provider: %s", e)
         messages.add_message(request, messages.ERROR,
@@ -49,20 +54,20 @@ def oidc_login(request):
 
 
 @never_cache
-def oidc_callback(request):
-    if not oidc.enabled():
+def oidc_callback(request, provider=providers.GENERIC):
+    if not oidc.enabled(provider):
         return redirect(settings.LOGIN_URL)
     try:
-        claims, nxt = oidc.finish(request, _redirect_uri(request))
+        claims, nxt = oidc.finish(request, _redirect_uri(request, provider), provider)
     except Exception as e:  # noqa: BLE001
-        return _fail(request, "SSO sign-in failed. Please try again.", str(e))
-    user, why = oidc.user_for_claims(claims)
+        return _fail(request, "SSO sign-in failed. Please try again.", f"{provider}: {e}")
+    user, why = oidc.user_for_claims(claims, provider)
     if not user:
         return _fail(request, *why)
     login(request, user, backend=SSO_BACKEND)
-    request.session["sso"] = {"sub": claims.get("sub"), "sid": claims.get("sid"), "iss": claims.get("iss")}
+    request.session["sso"] = {"sub": claims.get("sub"), "sid": claims.get("sid"), "iss": claims.get("iss"), "provider": provider}
     request.session.set_expiry(int(settings.ORASEC_OIDC_SESSION_HOURS * 3600))
-    logger.info("sso: %s signed in through SSO", user.username)
+    logger.info("sso: %s signed in through SSO (%s)", user.username, provider)
     return redirect(nxt)
 
 

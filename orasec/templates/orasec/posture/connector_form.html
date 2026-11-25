@@ -4,14 +4,15 @@
 {% block posture %}
 <div class="hdr"><div><h1>{% if obj %}{% trans "Edit connector" %}: {{ obj.name }}{% else %}{% trans "Add connector" %}{% endif %}</h1>
 <div class="sub">{% trans "Secrets are encrypted with the instance credential key (AES-256-GCM) and never shown again." %}</div></div></div>
-{% if not obj and not form.instance.kind and not request.GET.kind %}
+{% if not obj and not kind %}
 <div class="grid g4">
   {% for k, label in kinds %}
   <a class="card" style="text-decoration:none" href="?kind={{ k }}"><h2>{{ label }}</h2><span class="lk">{% trans "Configure" %} →</span></a>
   {% endfor %}
 </div>
 {% else %}
-<div class="grid" style="grid-template-columns:minmax(0,640px) minmax(0,1fr)">
+<style>.conn-form{grid-template-columns:minmax(0,640px) minmax(0,1fr)}.conn-form .mono,.conn-form input,.conn-form textarea{overflow-wrap:anywhere;max-width:100%}@media(max-width:900px){.conn-form{grid-template-columns:minmax(0,1fr)}}</style>
+<div class="grid conn-form">
 <form method="post" class="card f">{% csrf_token %}
   {{ form.as_p }}
   <button class="btn btn-p" type="submit"><i class="fa-solid fa-floppy-disk"></i> {% trans "Save" %}</button>
@@ -19,7 +20,7 @@
 </form>
 <div class="card" style="font-size:.86rem;line-height:1.55">
   <h2>{% trans "Set-up notes" %}</h2>
-  {% with k=form.instance.kind|default:request.GET.kind %}
+  {% with k=kind %}
   {% if k == "wazuh" %}
     <p><b>Base URL</b>: Wazuh server API, e.g. <span class="mono">https://wazuh.example.internal:55000</span>. <b>Username</b>: an API user (read-only role recommended).</p>
     <p><b>Options</b>: <span class="mono">{"indexer_url": "https://wazuh.indexer:9200", "vuln_product": "Infrastructure hosts", "sca": true, "alerts_level": 12}</span></p>
@@ -35,6 +36,23 @@
     <p>Each run adds every monitored machine to the asset inventory, so it appears on the Network Topology. Live CPU, memory, disk, network and temperature are read when the topology is open (cached a few seconds). A 15-minute interval is enough.</p>
   {% elif k == "patchmon" %}
     <p>PatchMon → Settings → Integrations → <i>Auto-Enrollment &amp; API</i> → New token, usage type <b>API</b>, scope <b>host:get</b> only. <b>Username</b>: token key. <b>Secret</b>: token secret.</p>
+  {% elif k == "plerion" %}
+    <p>Plerion → Settings → API keys: create a <b>read-only</b> tenant API key. <b>Base URL</b>: the region host of your tenant, e.g. <span class="mono">https://au.api.plerion.com</span>. Leave username blank. <b>Secret</b>: the API key.</p>
+    <p><b>Options</b>: <span class="mono">{"providers": ["AWS"], "severities": ["CRITICAL", "HIGH"], "findings": true, "product_name": "Cloud"}</span></p>
+    <p>Only failed checks that are not exempted in Plerion are imported. A check that passes again is closed by the next run.</p>
+  {% elif k == "tenable" %}
+    <p><b>Base URL</b>: <span class="mono">https://cloud.tenable.com</span>. <b>Username</b>: the API access key. <b>Secret</b>: the API secret key. Use a user that can view all assets; the connector only reads and exports.</p>
+    <p><b>Options</b>: <span class="mono">{"days": 90, "severities": ["critical", "high", "medium", "low"], "plugin_output": false, "product_name": "Infrastructure hosts"}</span></p>
+    <p>Imports assets assessed in the last <span class="mono">days</span> days and the vulnerabilities Tenable reports as open. An export takes a few minutes; an interval of 6 hours or more is enough.</p>
+  {% elif k == "checkpoint" %}
+    <p>In SmartConsole create a permission profile <b>Read Only</b> with <i>Management API Login</i>, and an administrator with that profile. The connector opens read-only sessions and sends only <span class="mono">show-*</span> commands.</p>
+    <p><b>Direct</b>: Base URL = the Management API URL, e.g. <span class="mono">https://mgmt.example.internal/web_api</span>. <b>Api key</b>: the administrator's API key, or Username + <b>Password</b>.</p>
+    <p><b>Smart-1 Cloud through the portal</b>: Base URL = the Authentication URL from the Portal API Keys page; <b>Options</b>: <span class="mono">{"auth_mode": "portal", "client_id": "…"}</span>; <b>Portal secret</b> = the Secret Key. The management administrator above is still needed for the rule base.</p>
+    <p><b>Other options</b>: <span class="mono">{"packages": ["Standard"], "domain": "", "product_name": "Network perimeter"}</span>. TLS is always verified for this connector.</p>
+  {% elif k == "aws" %}
+    <p>An IAM user with the AWS-managed <b>SecurityAudit</b> and <b>ViewOnlyAccess</b> policies. <b>Username</b>: access key id. <b>Secret access key</b>: its secret. <b>Session token</b>: only for temporary credentials.</p>
+    <p>Leave the key blank to use the server's own identity (instance profile or task role). For another account: <span class="mono">{"role_arn": "arn:aws:iam::&lt;account id&gt;:role/OraSecReadOnly", "external_id": "…"}</span>, one connector for each account.</p>
+    <p><b>Options</b>: <span class="mono">{"regions": ["us-east-1"], "security_hub": true, "guardduty": true, "inspector": true}</span></p>
   {% endif %}
   {% endwith %}
   <p class="muted">{% trans "Turn off TLS verification only for LAN appliances with self-signed certificates." %}</p>

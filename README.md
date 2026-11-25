@@ -17,13 +17,13 @@ It is free and open source (BSD 3-Clause).
 | Area | What you get |
 |---|---|
 | Posture | One score and a command centre: open, known-exploited (CISA KEV) and likely-exploited (EPSS) findings, SLA, fix-first list |
-| Connectors | Wazuh, PatchMon, Beszel, UniFi, OPNsense, AWS, Cloudflare, GitHub, a policy tool; each is a **plugin** you turn on or off |
+| Connectors | Wazuh, PatchMon, Beszel, UniFi, OPNsense, Check Point, AWS, Plerion, Tenable, Cloudflare, GitHub, a policy tool; each is a **plugin** you turn on or off |
 | Assets | Live asset inventory with owners, classification and locations (ISO/IEC 27001 A.5.9), Excel and PDF export |
 | Attacks | Blocked and suspicious events on a map and a timeline, security alerts from Wazuh |
 | Network | Live topology: your documented network with live health, VPN, firewall and tunnel state on top |
 | GRC | Risk register, exceptions, suppliers, objectives, change register, leavers, ISO/IEC 27001 control checks with evidence |
 | Assistant | "Ora", an AI assistant over your own data, with prompt-injection guardrails; optional MCP server for AI clients |
-| Sign-in | Local accounts, optional OpenID Connect single sign-on |
+| Sign-in | Local accounts; optional OpenID Connect, Microsoft Entra ID, Okta and Active Directory sign-in |
 | Mobile app | Android and iOS app (`mobile/`): posture, vulnerabilities, attacks, risks, phone notifications for security alerts |
 
 ## Quick start (Docker Compose)
@@ -68,6 +68,9 @@ Every integration is a plugin. An administrator turns each one on or off under *
 (one per connector kind), threat intelligence (KEV, EPSS), the Ora assistant, single sign-on, the mobile app, phone
 notifications, the MCP server, and the notification channels. A plugin that is off does not run, and the mobile app
 hides what depends on it.
+
+Set-up notes for each connector and each way to sign in, and how far each one is tested, are in
+[readme-docs/INTEGRATIONS.md](readme-docs/INTEGRATIONS.md).
 
 ## Mobile app
 

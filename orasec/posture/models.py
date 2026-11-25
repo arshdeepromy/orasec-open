@@ -39,6 +39,9 @@ class Connector(models.Model):
         ("github", "GitHub (repositories, Dependabot, code & secret scanning)"),
         ("beszel", "Beszel (host health: CPU, memory, disk, network)"),
         ("isms", "Policy tool (ISMS) two-way sync"),
+        ("plerion", "Plerion (cloud inventory, CSPM)"),
+        ("tenable", "Tenable Vulnerability Management"),
+        ("checkpoint", "Check Point (firewall policy, internet exposure)"),
     ]
     STATUS_CHOICES = [("never", "Never run"), ("running", "Running"), ("ok", "OK"), ("warning", "Warning"), ("error", "Error")]
 

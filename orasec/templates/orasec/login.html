@@ -130,7 +130,14 @@
                 <a class="btn btn-primary login-btn sso-btn" id="oidcLogin" href="{% url 'oidc_login' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}">
                     <i class="fa-solid fa-right-to-bracket"></i> {{ OIDC_BUTTON_TEXT }}
                 </a>
-                <div class="sso-divider"><span>{% trans "or break-glass login" %}</span></div>
+            {% endif %}
+            {% for sp in SSO_PROVIDERS %}
+                <a class="btn btn-primary login-btn sso-btn" id="ssoLogin-{{ sp.key }}" href="{% url 'oidc_provider_login' sp.key %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}">
+                    <i class="fa-solid fa-right-to-bracket"></i> {{ sp.label }}
+                </a>
+            {% endfor %}
+            {% if OIDC_ENABLED or SSO_PROVIDERS %}
+                <div class="sso-divider"><span>{% if LDAP_SIGN_IN %}{% trans "or your directory or break-glass login" %}{% else %}{% trans "or break-glass login" %}{% endif %}</span></div>
             {% endif %}
 
             <form method="POST" autocomplete="off"> {% csrf_token %}

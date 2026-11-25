@@ -60,10 +60,14 @@ SOURCE_SUMMARIES = {
     "github": "Repositories, Dependabot alerts, code scanning and secret scanning.",
     "beszel": "Host health: CPU, memory, disk and network.",
     "isms": "Two-way sync with the policy tool (documents, risks, controls).",
+    "plerion": "Cloud inventory and failed cloud security posture checks from every account connected to Plerion.",
+    "tenable": "Assets and open vulnerabilities from Tenable Vulnerability Management.",
+    "checkpoint": "Reads the firewall policy (read-only): what the internet can reach, on which ports, through which rule.",
 }
 SOURCE_ICONS = {
     "wazuh": "fa-shield-virus", "opnsense": "fa-fire", "unifi": "fa-wifi", "patchmon": "fa-bandage", "semaphore": "fa-rocket",
     "aws": "fa-cloud", "cloudflare": "fa-cloud-bolt", "github": "fa-code-branch", "beszel": "fa-heart-pulse", "isms": "fa-file-shield",
+    "plerion": "fa-cloud-sun", "tenable": "fa-bug", "checkpoint": "fa-shield-halved",
 }
 
 
@@ -94,6 +98,18 @@ def _fixed_plugins() -> list[Plugin]:
         Plugin("sso", "Single sign-on (OpenID Connect)", GROUP_ACCESS,
                "Sign in through your identity provider.", "fa-right-to-bracket", check="check_sso",
                off_note="People sign in with their OraSec user name and password while this is off."),
+        Plugin("sso.entra", "Microsoft Entra ID sign-in", GROUP_ACCESS,
+               "Sign in with a Microsoft work or school account. Only people who already have an OraSec account get in.",
+               "fa-right-to-bracket", check="check_sso_provider",
+               off_note="The Microsoft button leaves the login page. Other ways to sign in are not affected."),
+        Plugin("sso.okta", "Okta sign-in", GROUP_ACCESS,
+               "Sign in with Okta (authorization code flow with PKCE). Only people who already have an OraSec account get in.",
+               "fa-right-to-bracket", check="check_sso_provider",
+               off_note="The Okta button leaves the login page. Other ways to sign in are not affected."),
+        Plugin("sso.ldap", "Active Directory sign-in", GROUP_ACCESS,
+               "People sign in on the login form with their directory user name and password, checked over LDAPS.",
+               "fa-users-rectangle", check="check_ldap",
+               off_note="Directory passwords are no longer accepted. Local accounts keep working."),
         Plugin("mobile", "Mobile app", GROUP_ACCESS,
                "Lets linked phones and tablets read OraSec through the mobile API.", "fa-mobile-screen",
                off_note="Every linked device stops working until this is on again. Devices stay linked."),
@@ -148,6 +164,23 @@ def check_sso(plugin: Plugin) -> tuple[bool, str]:
     ok = bool(getattr(settings, "ORASEC_OIDC_ENABLED", False) and getattr(settings, "ORASEC_OIDC_ISSUER", "")
               and getattr(settings, "ORASEC_OIDC_CLIENT_ID", ""))
     return (ok, "" if ok else "Set ORASEC_OIDC_ENABLED, ORASEC_OIDC_ISSUER and ORASEC_OIDC_CLIENT_ID on the server.")
+
+
+def check_sso_provider(plugin: Plugin) -> tuple[bool, str]:
+    from orasec.sso import providers  # noqa: PLC0415
+    p = providers.get(plugin.key.split(".", 1)[1])
+    if p.configured:
+        return True, ""
+    return False, p.missing or f"Set ORASEC_{p.key.upper()}_ENABLED on the server."
+
+
+def check_ldap(plugin: Plugin) -> tuple[bool, str]:
+    from orasec.sso import ldap  # noqa: PLC0415
+    if not ldap.configured():
+        return False, "Set ORASEC_LDAP_ENABLED, ORASEC_LDAP_HOST, ORASEC_LDAP_BASE_DN, ORASEC_LDAP_BIND_DN and ORASEC_LDAP_BIND_PASSWORD on the server."
+    if not ldap.available():
+        return False, "The ldap3 package is not installed on this server."
+    return True, ""
 
 
 def check_push(plugin: Plugin) -> tuple[bool, str]:

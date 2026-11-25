@@ -18,6 +18,14 @@ def _plugin_on(key):
     return registry.is_on(key)
 
 
+def _sso_buttons():
+    try:
+        from orasec.sso import providers  # noqa: PLC0415
+        return providers.login_buttons()
+    except Exception:  # the login page must render whatever the sign-in settings are
+        return []
+
+
 def globalize_vars(request):
     # return the value you want as a dictionnary. you may add multiple values in there.
     context = {
@@ -27,6 +35,8 @@ def globalize_vars(request):
         "OIDC_ENABLED": bool(getattr(settings, "ORASEC_OIDC_ENABLED", False) and getattr(settings, "ORASEC_OIDC_ISSUER", "")
                              and _plugin_on("sso")),
         "OIDC_BUTTON_TEXT": getattr(settings, "ORASEC_OIDC_BUTTON_TEXT", "Sign in with SSO"),
+        "SSO_PROVIDERS": _sso_buttons(),
+        "LDAP_SIGN_IN": bool(getattr(settings, "ORASEC_LDAP_ENABLED", False) and _plugin_on("sso.ldap")),
         "ORG_NAME": site_profile.org_name(),
         "SECURITY_CONTACT": site_profile.get("security_contact") or "",
         "ISSUES_URL": site_profile.get("issues_url") or "",

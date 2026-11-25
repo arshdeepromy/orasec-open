@@ -58,6 +58,7 @@ django-split-settings==1.3.2
 # fixed upstream in https://github.com/radiac/django-tagulous/issues/192).
 django-tagulous==2.2.3
 PyJWT==2.15.1
+ldap3==2.9.1  # Active Directory sign-in (orasec.sso.ldap); only used when ORASEC_LDAP_ENABLED is set
 cvss==3.6
 django-fieldsignals==0.8.0
 hyperlink==21.0.0

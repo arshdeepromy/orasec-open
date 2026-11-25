@@ -5,7 +5,8 @@
 # This can be used to carry in Docker secrets.
 # Inspired by https://github.com/grafana/grafana-docker/pull/166
 # But rewrote for /bin/sh
-for VAR_NAME in $(env | grep '^ORASEC_[^=]\+_FILE=.\+' | sed -r "s/([^=]*)_FILE=.*/\1/g"); do
+# ORASEC_SITE_FILE is left alone: it is the path of the site profile (orasec/site.py), which is read as a file.
+for VAR_NAME in $(env | grep '^ORASEC_[^=]\+_FILE=.\+' | grep -v '^ORASEC_SITE_FILE=' | sed -r "s/([^=]*)_FILE=.*/\1/g"); do
     VAR_NAME_FILE="$VAR_NAME"_FILE
     if [ -n "$(eval echo "\$$VAR_NAME")" ]; then
         echo >&2 "WARNING: Both $VAR_NAME and $VAR_NAME_FILE are set. Content of $VAR_NAME will be overridden."

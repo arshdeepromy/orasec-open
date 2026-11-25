@@ -23,6 +23,9 @@ SCAN_TYPES = {
     "OraSec AWS": "AWS: security groups, IAM, S3, RDS, EC2, CloudTrail and GuardDuty/Security Hub/Inspector findings.",
     "OraSec Cloudflare": "Cloudflare: TLS/HSTS settings, WAF, DNS exposure, SPF/DMARC and DNSSEC.",
     "OraSec GitHub": "GitHub: Dependabot, code scanning and secret scanning alerts, repository security settings.",
+    "OraSec Plerion": "Plerion: failed cloud security posture checks across the connected cloud accounts.",
+    "OraSec Tenable": "Tenable Vulnerability Management: open vulnerabilities from the bulk export.",
+    "OraSec Check Point": "Check Point: what the firewall policy lets the internet reach, and broad rules.",
 }
 SEVERITIES = {"critical": "Critical", "high": "High", "medium": "Medium", "low": "Low", "info": "Info", "informational": "Info"}
 

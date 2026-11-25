@@ -23,6 +23,9 @@ CONNECTOR_SCAN_TYPES = {
     "aws": "OraSec AWS",
     "cloudflare": "OraSec Cloudflare",
     "github": "OraSec GitHub",
+    "plerion": "OraSec Plerion",
+    "tenable": "OraSec Tenable",
+    "checkpoint": "OraSec Check Point",
 }
 
 
@@ -85,6 +88,8 @@ class Http:
 
     def request(self, method, path, expect_json=True, **kw):
         url = path if path.startswith("http") else self.base + path
+        # ``log_as``: what to call this request in the log and in errors, for a URL that itself carries a secret
+        path = kw.pop("log_as", None) or path
         kw.setdefault("timeout", self.timeout)
         kw.setdefault("verify", self.verify)
         t0 = time.monotonic()
@@ -144,7 +149,21 @@ def register(cls):
 
 def get_connector_class(kind):
     # import for side effects (registration)
-    from orasec.posture.connectors import aws, beszel, cloudflare, github, isms, opnsense, patchmon, semaphore, unifi, wazuh  # noqa: F401, PLC0415
+    from orasec.posture.connectors import (  # noqa: F401, PLC0415
+        aws,
+        beszel,
+        checkpoint,
+        cloudflare,
+        github,
+        isms,
+        opnsense,
+        patchmon,
+        plerion,
+        semaphore,
+        tenable,
+        unifi,
+        wazuh,
+    )
     if kind not in REGISTRY:
         msg = f"Unknown connector kind '{kind}'"
         raise ConnectorError(msg)
