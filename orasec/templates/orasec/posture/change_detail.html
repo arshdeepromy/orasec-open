@@ -1,0 +1,60 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{{ c.ref }} | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}{% include "orasec/posture/_change_styles.html" %}
+<div class="hdr"><div><h1>{{ c.ref }} {{ c.title }}</h1>
+<div class="sub">{{ c.get_category_display }} · {{ c.get_change_type_display }} · <span class="b r-{{ c.risk_level }}">{{ c.get_risk_level_display }} {% trans "risk" %}</span> · <span class="b c-{{ c.status }}">{{ c.get_status_display }}</span></div></div>
+<div style="display:flex;gap:.4rem" class="noprint"><a class="btn" href="{% url 'orasec_changes' %}">← {% trans "Change Register" %}</a>
+{% if perm.edit %}<a class="btn" href="{% url 'orasec_change_edit' c.id %}"><i class="fa-solid fa-pen"></i> {% trans "Edit" %}</a>{% endif %}
+<button class="btn" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> PDF</button></div></div>
+
+{% if c.imported %}<div class="card" style="margin-bottom:1rem;font-size:.86rem">{% trans "Imported from the old Change Log (REG-010). It was recorded before the Change Register existed, so the approval rules did not apply then." %}</div>{% endif %}
+<div class="steps">
+  <span class="done">1 {% trans "Raised" %}</span>
+  <span class="{% if c.approved_by %}done{% elif c.status == 'submitted' or c.status == 'implemented' %}now{% endif %}">2 {% trans "Approved" %}</span>
+  <span class="{% if c.implemented_at %}done{% elif c.status == 'approved' %}now{% endif %}">3 {% trans "Done" %}</span>
+  <span class="{% if c.status == 'closed' %}done{% elif c.status == 'implemented' and c.approved_by %}now{% endif %}">4 {% trans "Reviewed" %}</span>
+</div>
+
+<div class="grid g2">
+<div class="card"><h2>{% trans "The change" %}</h2><dl class="kv">
+<dt>{% trans "Why" %}</dt><dd>{{ c.reason }}</dd>
+<dt>{% trans "Consequences and what is affected" %}</dt><dd>{{ c.impact }}</dd>
+<dt>{% trans "People, time and cost" %}</dt><dd>{{ c.resources|default:"—" }}</dd>
+<dt>{% trans "Plan, test and rollback" %}</dt><dd>{{ c.plan|default:"—" }}</dd>
+<dt>{% trans "Systems / documents" %}</dt><dd>{{ c.systems|default:"—" }}</dd>
+{% if c.link %}<dt>{% trans "Link" %}</dt><dd><a class="lk" href="{{ c.link }}" rel="noopener" target="_blank">{{ c.link|truncatechars:70 }}</a></dd>{% endif %}
+<dt>{% trans "Owner" %}</dt><dd>{% firstof c.owner.get_full_name c.owner.username "—" %}</dd>
+<dt>{% trans "Planned for" %}</dt><dd>{{ c.planned_date|date:"j M Y"|default:"—" }}</dd>
+<dt>{% trans "Raised by" %}</dt><dd>{% firstof c.requested_by.get_full_name c.requested_by.username "—" %}, {{ c.requested_at|date:"j M Y H:i" }}</dd>
+</dl></div>
+
+<div class="card"><h2>{% trans "Approval, work and review" %}</h2><dl class="kv">
+<dt>{% trans "Approval" %}</dt><dd>{% if c.approved_by %}{% firstof c.approved_by.get_full_name c.approved_by.username "—" %}, {{ c.approved_at|date:"j M Y H:i" }}{% if c.approval_note %}<br>{{ c.approval_note }}{% endif %}
+{% elif c.status == "rejected" %}{{ c.approval_note }}{% elif c.approval_due %}<span class="{% if c.approval_overdue %}late{% endif %}">{% trans "Needed by" %} {{ c.approval_due|date:"j M Y" }}</span>{% else %}{% trans "Waiting" %}{% endif %}</dd>
+<dt>{% trans "Done" %}</dt><dd>{% if c.implemented_at %}{% firstof c.implemented_by.get_full_name c.implemented_by.username "—" %}, {{ c.implemented_at|date:"j M Y H:i" }}{% if c.implementation_note %}<br>{{ c.implementation_note }}{% endif %}{% else %}—{% endif %}</dd>
+<dt>{% trans "Review" %}</dt><dd>{% if c.reviewed_at %}<span class="b c-closed">{{ c.get_review_result_display }}</span> {% firstof c.reviewed_by.get_full_name c.reviewed_by.username "—" %}, {{ c.reviewed_at|date:"j M Y H:i" }}<br>{{ c.review_note }}{% elif c.review_overdue %}<span class="late">{% trans "Overdue (more than 14 days after the change)" %}</span>{% else %}—{% endif %}</dd>
+</dl>
+
+{% if perm.approve %}<form method="post" class="f noprint" style="margin-top:1rem">{% csrf_token %}
+<h2>{% trans "Your decision" %}</h2><p><label>{% trans "Note" %}</label>{{ form.note }}</p>
+<button class="btn btn-p" name="action" value="approve"><i class="fa-solid fa-check"></i> {% trans "Approve" %}</button>
+{% if c.status == "submitted" %}<button class="btn btn-d" name="action" value="reject">{% trans "Reject" %}</button>{% endif %}</form>{% endif %}
+
+{% if perm.implement %}<form method="post" class="f noprint" style="margin-top:1rem">{% csrf_token %}
+<h2>{% trans "Mark as done" %}</h2>{% if not c.approved_by %}<p class="muted" style="font-size:.82rem">{% trans "Emergency or recorded afterwards: it can be marked done now, but must still be approved." %}</p>{% endif %}
+<p><label>{% trans "When it was done" %}</label>{{ form.when }}</p><p><label>{% trans "What was done, and the evidence (before and after, backup ID)" %}</label>{{ form.note }}</p>
+<button class="btn btn-p" name="action" value="implement">{% trans "Mark done" %}</button></form>{% endif %}
+
+{% if perm.review %}<form method="post" class="f noprint" style="margin-top:1rem">{% csrf_token %}
+<h2>{% trans "Review and close" %}</h2><p><label>{% trans "Result" %}</label>{{ form.result }}</p>
+<p><label>{% trans "How you checked it" %}</label>{{ form.note }}</p>
+<button class="btn btn-p" name="action" value="review">{% trans "Close the change" %}</button></form>{% endif %}
+
+{% if perm.cancel %}<form method="post" class="noprint" style="margin-top:1rem">{% csrf_token %}<button class="btn btn-d" name="action" value="cancel" onclick="return confirm('Cancel this change?')">{% trans "Cancel the change" %}</button></form>{% endif %}
+
+{% if perm.why_not and not perm.approve and not perm.review %}<div class="muted" style="margin-top:.8rem;font-size:.85rem">{{ perm.why_not }}</div>{% endif %}
+</div></div>
+{% endblock %}
+

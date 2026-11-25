@@ -1,0 +1,13 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Triage Rules | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "Triage Rules" %}</h1><div class="sub">{% trans "No-code rules applied to findings every hour (after imports and priority refresh): tag, assign, close as false positive / out of scope, set remediation dates and notify by email or webhook (Slack/Teams)." %}</div></div>
+{% if request.user.is_superuser %}<a class="btn btn-p" href="{% url 'orasec_triage_rule_new' %}"><i class="fa-solid fa-plus"></i> {% trans "New rule" %}</a>{% endif %}</div>
+<div class="card"><table class="t"><thead><tr><th>#</th><th>{% trans "Rule" %}</th><th>{% trans "When" %}</th><th>{% trans "Then" %}</th><th class="num">{% trans "Matches" %}</th><th>{% trans "Last match" %}</th><th></th></tr></thead><tbody>
+{% for r in rules %}<tr><td>{{ r.order }}</td><td><b>{{ r.name }}</b>{% if not r.enabled %} <span class="b b-muted">{% trans "off" %}</span>{% endif %}{% if r.stop_processing %} <span class="b b-muted">{% trans "stop" %}</span>{% endif %}</td>
+<td class="mono" style="font-size:.75rem">{{ r.conditions }}</td><td class="mono" style="font-size:.75rem">{{ r.actions }}</td><td class="num">{{ r.match_count }}</td><td class="muted">{{ r.last_matched_at|date:"j M H:i"|default:"—" }}</td>
+<td>{% if request.user.is_superuser %}<a class="lk" href="{% url 'orasec_triage_rule_edit' r.id %}">{% trans "Edit" %}</a>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="7" class="empty">{% trans "No rules yet." %}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}
+

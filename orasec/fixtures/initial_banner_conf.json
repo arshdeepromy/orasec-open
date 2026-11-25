@@ -1,0 +1,10 @@
+[
+{
+    "model": "orasec.bannerconf",
+    "pk": 1,
+    "fields": {
+        "banner_enable": false,
+        "banner_message": ""
+    }
+}
+]

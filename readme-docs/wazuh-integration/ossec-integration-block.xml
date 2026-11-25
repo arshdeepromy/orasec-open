@@ -1,0 +1,8 @@
+<!-- Add to the Wazuh manager's ossec.conf. The api_key is the OraSec webhook token (Wazuh connector, secret "webhook_token"). -->
+<integration>
+  <name>custom-orasec</name>
+  <hook_url>https://orasec.example.com/orasec/wazuh/alert/</hook_url>
+  <api_key>REPLACE_WITH_WEBHOOK_TOKEN</api_key>
+  <level>8</level>
+  <alert_format>json</alert_format>
+</integration>

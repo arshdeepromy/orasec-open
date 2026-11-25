@@ -1,0 +1,79 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n static %}
+{% block title %}Insights | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "Insights" %}</h1><div class="sub">{% trans "Executive, priority, programme, remediation and tool views. Every view prints to PDF." %}</div></div>
+<button class="btn noprint" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> {% trans "Export PDF" %}</button></div>
+<div class="tabs noprint">
+  {% for v, l in tabs %}{% endfor %}
+  <a href="{% url 'orasec_insights_view' 'executive' %}" class="{% if view == 'executive' %}on{% endif %}">{% trans "Executive" %}</a>
+  <a href="{% url 'orasec_insights_view' 'priority' %}" class="{% if view == 'priority' %}on{% endif %}">{% trans "Priority" %}</a>
+  <a href="{% url 'orasec_insights_view' 'program' %}" class="{% if view == 'program' %}on{% endif %}">{% trans "Program" %}</a>
+  <a href="{% url 'orasec_insights_view' 'remediation' %}" class="{% if view == 'remediation' %}on{% endif %}">{% trans "Remediation" %}</a>
+  <a href="{% url 'orasec_insights_view' 'tool' %}" class="{% if view == 'tool' %}on{% endif %}">{% trans "Tool coverage" %}</a>
+</div>
+<div class="grid g4" style="margin-bottom:1rem">
+  <div class="card kpi"><div class="l">{% trans "Posture" %}</div><div class="v">{{ posture.score }}</div><div class="d">/ 1000</div></div>
+  <div class="card kpi"><div class="l">{% trans "Exposure" %}</div><div class="v">{{ posture.vuln }}</div></div>
+  <div class="card kpi"><div class="l">ISO 27001</div><div class="v">{{ posture.compliance }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Hygiene" %}</div><div class="v">{{ posture.hygiene }}</div></div>
+</div>
+
+{% if view == "executive" %}
+<div class="grid g2">
+  <div class="card"><h2>{% trans "Posture and severity trend" %}</h2><div style="height:260px"><canvas id="c1"></canvas></div></div>
+  <div class="card"><h2>{% trans "Open risk by asset" %}</h2>
+  <table class="t"><thead><tr><th>{% trans "Asset" %}</th><th class="num">Crit</th><th class="num">High</th><th class="num">KEV</th><th class="num">{% trans "Total" %}</th></tr></thead><tbody>
+  {% for r in by_product %}<tr><td>{{ r.test__engagement__product__name }}</td><td class="num">{{ r.crit }}</td><td class="num">{{ r.high }}</td><td class="num">{{ r.kev }}</td><td class="num">{{ r.n }}</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+<script src="{% static 'chart.js/dist/chart.umd.js' %}"></script>
+<script>(function(){const d={{ trend|safe }};new Chart(document.getElementById('c1'),{data:{labels:d.labels,datasets:[
+ {type:'line',label:'Posture',data:d.score,borderColor:'#00a890',yAxisID:'y',tension:.3},
+ {type:'bar',label:'Critical',data:d.critical,backgroundColor:'#e0594f',yAxisID:'y1'},{type:'bar',label:'High',data:d.high,backgroundColor:'#d8a800',yAxisID:'y1'}]},
+ options:{maintainAspectRatio:false,scales:{y:{min:0,max:1000,position:'left'},y1:{position:'right',grid:{display:false}}}}});})();</script>
+
+{% elif view == "priority" %}
+<div class="grid g2">
+  <div class="card"><h2>{% trans "Band × severity" %}</h2>
+  <table class="t"><thead><tr><th>{% trans "Band" %}</th><th>{% trans "Severity" %}</th><th class="num">{% trans "Findings" %}</th></tr></thead><tbody>
+  {% for m in matrix %}<tr><td><span class="b b-{{ m.band|cut:' ' }}">{{ m.band }}</span></td><td><span class="b b-{{ m.finding__severity }}">{{ m.finding__severity }}</span></td><td class="num">{{ m.n }}</td></tr>{% endfor %}</tbody></table></div>
+  <div class="card"><h2>{% trans "Highest EPSS (top 10% likelihood of exploitation)" %}</h2>
+  <table class="t"><tbody>{% for f in epss_top %}<tr><td><a class="lk" href="{% url 'view_finding' f.id %}">{{ f.title|truncatechars:70 }}</a></td><td class="num mono">{{ f.epss_score|floatformat:3 }}</td></tr>{% empty %}<tr><td class="empty">{% trans "No EPSS data yet." %}</td></tr>{% endfor %}</tbody></table></div>
+</div>
+<div class="card" style="margin-top:1rem"><h2>{% trans "Known exploited (CISA KEV)" %}</h2>
+<table class="t"><tbody>{% for f in kev %}<tr><td><span class="b b-kev">KEV</span></td><td><a class="lk" href="{% url 'view_finding' f.id %}">{{ f.title|truncatechars:100 }}</a></td><td>{{ f.test.engagement.product.name }}</td><td>{% trans "added" %} {{ f.kev_date|date:"j M Y" }}</td></tr>{% empty %}<tr><td class="empty">{% trans "No known-exploited vulnerabilities open." %}</td></tr>{% endfor %}</tbody></table></div>
+
+{% elif view == "program" %}
+<div class="grid g4" style="margin-bottom:1rem">
+  <div class="card kpi"><div class="l">{% trans "Tracked against SLA" %}</div><div class="v">{{ sla.tracked }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Past SLA" %}</div><div class="v" style="color:#b3261e">{{ sla.overdue }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Due within 7 days" %}</div><div class="v">{{ sla.due_7d }}</div></div>
+</div>
+<div class="grid g2">
+  <div class="card"><h2>{% trans "Opened vs closed per week (90 days)" %}</h2><div style="height:260px"><canvas id="c2"></canvas></div></div>
+  <div class="card"><h2>{% trans "Mean time to remediate (90 days)" %}</h2>
+  <table class="t"><thead><tr><th>{% trans "Severity" %}</th><th class="num">{% trans "Closed" %}</th><th class="num">MTTR ({% trans "days" %})</th></tr></thead><tbody>
+  {% for m in mttr %}<tr><td><span class="b b-{{ m.severity }}">{{ m.severity }}</span></td><td class="num">{{ m.closed }}</td><td class="num">{{ m.mttr|default:"—" }}</td></tr>{% endfor %}</tbody></table></div>
+</div>
+<script src="{% static 'chart.js/dist/chart.umd.js' %}"></script>
+<script>(function(){const w={{ weeks|safe }};new Chart(document.getElementById('c2'),{type:'bar',data:{labels:w.map(x=>x.week),datasets:[
+ {label:'Opened',data:w.map(x=>x.opened),backgroundColor:'#e0594f'},{label:'Closed',data:w.map(x=>x.closed),backgroundColor:'#00a890'}]},options:{maintainAspectRatio:false}});})();</script>
+
+{% elif view == "remediation" %}
+<div class="card"><h2>{% trans "Top root causes" %}</h2>
+<table class="t"><thead><tr><th>{% trans "Component" %}</th><th class="num">{% trans "Impact" %}</th><th class="num">{% trans "Findings" %}</th><th class="num">KEV</th><th class="num">{% trans "Hosts" %}</th><th>{% trans "Deadline" %}</th></tr></thead><tbody>
+{% for r in root_causes %}<tr><td class="mono">{{ r.component_name }}</td><td class="num"><b>{{ r.impact }}</b></td><td class="num">{{ r.findings }}</td><td class="num">{{ r.kev }}</td><td class="num">{{ r.hosts }}</td><td>{{ r.earliest_due|date:"j M Y" }}</td></tr>{% endfor %}</tbody></table>
+<div style="margin-top:.6rem"><a class="lk" href="{% url 'orasec_remediation' %}">{% trans "Open the Remediation Center" %} →</a></div></div>
+
+{% elif view == "tool" %}
+<div class="grid g2">
+  <div class="card"><h2>{% trans "Findings by tool" %}</h2>
+  <table class="t"><thead><tr><th>{% trans "Tool" %}</th><th class="num">{% trans "Assets" %}</th><th class="num">Crit</th><th class="num">High</th><th class="num">{% trans "Total" %}</th></tr></thead><tbody>
+  {% for t in tools %}<tr><td>{{ t.test__test_type__name }}</td><td class="num">{{ t.products }}</td><td class="num">{{ t.crit }}</td><td class="num">{{ t.high }}</td><td class="num">{{ t.n }}</td></tr>{% endfor %}</tbody></table></div>
+  <div class="card"><h2>{% trans "Scan cadence" %}</h2>
+  <table class="t"><tbody>{% for r in cadence %}<tr><td>{% if r.product %}{{ r.product.name }}{% else %}{{ r.asset.name }}{% endif %}</td><td><span class="b b-{{ r.state }}">{{ r.state }}</span></td><td class="muted">{{ r.age_days|default:"—" }}d / {{ r.expected_days }}d</td></tr>{% endfor %}</tbody></table></div>
+</div>
+{% endif %}
+{% endblock %}
+

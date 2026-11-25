@@ -1,0 +1,94 @@
+---
+services:
+  uwsgi:
+    build:
+      context: .
+      dockerfile: Dockerfile.django-${ORASEC_OS:-debian}
+      target: development
+    entrypoint: ['/wait-for-it.sh', '${ORASEC_DATABASE_HOST:-postgres}:${ORASEC_DATABASE_PORT:-5432}', '-t', '30', '--', '/entrypoint-uwsgi-dev.sh']
+    volumes:
+      - '.:/app:z'
+    environment:
+      PYTHONWARNINGS: error  # We are strict about Warnings during development
+      ORASEC_DEBUG: 'True'
+      ORASEC_DJANGO_DEBUG_TOOLBAR_ENABLED: "${ORASEC_DJANGO_DEBUG_TOOLBAR_ENABLED:-False}"
+      ORASEC_ADMIN_USER: "${ORASEC_ADMIN_USER:-admin}"
+      ORASEC_ADMIN_PASSWORD: "${ORASEC_ADMIN_PASSWORD:-admin}"
+      ORASEC_EMAIL_URL: "smtp://mailhog:1025"
+  celeryworker:
+    build:
+      context: .
+      dockerfile: Dockerfile.django-${ORASEC_OS:-debian}
+      target: development
+    entrypoint: ['/wait-for-it.sh', '${ORASEC_DATABASE_HOST:-postgres}:${ORASEC_DATABASE_PORT:-5432}', '-t', '30', '--', '/entrypoint-celery-worker-dev.sh']
+    volumes:
+      - '.:/app:z'
+    environment:
+      PYTHONWARNINGS: error  # We are strict about Warnings during development
+      ORASEC_DEBUG: 'True'
+      ORASEC_EMAIL_URL: "smtp://mailhog:1025"
+  celerybeat:
+    build:
+      context: .
+      dockerfile: Dockerfile.django-${ORASEC_OS:-debian}
+      target: development
+    volumes:
+      - '.:/app:z'
+    environment:
+      PYTHONWARNINGS: error  # We are strict about Warnings during development
+      ORASEC_DEBUG: 'True'
+  initializer:
+    build:
+      context: .
+      dockerfile: Dockerfile.django-${ORASEC_OS:-debian}
+      target: development
+    volumes:
+      - '.:/app:z'
+    environment:
+      PYTHONWARNINGS: error  # We are strict about Warnings during development
+      ORASEC_DEBUG: 'True'
+      ORASEC_ADMIN_USER: "${ORASEC_ADMIN_USER:-admin}"
+      ORASEC_ADMIN_PASSWORD: "${ORASEC_ADMIN_PASSWORD:-admin}"
+  nginx:
+    volumes:
+      - './orasec/static/orasec:/usr/share/nginx/html/static/orasec'
+  postgres:
+    ports:
+      - target: ${ORASEC_DATABASE_PORT:-5432}
+        published: ${ORASEC_DATABASE_PORT:-5432}
+        protocol: tcp
+        mode: host
+  mailhog:
+    image: mailhog/mailhog:v1.0.1@sha256:8d76a3d4ffa32a3661311944007a415332c4bb855657f4f6c57996405c009bea
+    entrypoint: [ "/bin/sh", "-c", "MailHog &>/dev/null" ]
+    # inspired by https://github.com/mailhog/MailHog/issues/56#issuecomment-291968642
+    ports:
+      - target: 1025
+        published: 1025
+        protocol: tcp
+        mode: host
+      - target: 8025
+        published: 8025
+        protocol: tcp
+        mode: host
+  "webhook.endpoint":
+    image: mccutchen/go-httpbin:2.26.0@sha256:873b4fdb27fe7cc66fa12cb9362574e1b0bf31df7ca8a71b2502988327a0b8a4
+  integration-tests:
+    platform: "linux/amd64"
+    profiles:
+      - integration
+    build:
+      context: ./
+      dockerfile: ${INTEGRATION_TESTS_DOCKERFILE:-Dockerfile.integration-tests-debian}
+    image: "orasec/orasec-integration-tests:${INTEGRATION_TESTS_VERSION:-latest}"
+    depends_on:
+      - nginx
+      - uwsgi
+    entrypoint: ['/wait-for-it.sh', '${ORASEC_DATABASE_HOST:-postgres}:${ORASEC_DATABASE_PORT:-5432}', '-t', '30', '--', '/app/docker/entrypoint-integration-tests.sh']
+    volumes:
+      - '.:/app:z'
+    environment:
+      ORASEC_BASE_URL: 'http://nginx:8080/'
+      ORASEC_ADMIN_USER: "${ORASEC_ADMIN_USER:-admin}"
+      ORASEC_ADMIN_PASSWORD: "${ORASEC_ADMIN_PASSWORD:-admin}"
+      ORASEC_INTEGRATION_TEST_FILENAME: "${ORASEC_INTEGRATION_TEST_FILENAME:-}"

@@ -1,0 +1,121 @@
+{% comment %}
+Sidebar state: which entry is "you are here", which groups stay open, where the rail was scrolled,
+and the off-canvas menu on narrow screens. Runs inline at the end of <body>, i.e. before the deferred
+Alpine script starts, so groups render open without a flicker.
+{% endcomment %}
+<script>
+(function () {
+    var side = document.getElementById("os-sidebar");
+    if (!side) { return; }
+    var nav = side.querySelector("nav");
+    var KEY_OPEN = "os-nav-open", KEY_LAST = "os-nav-last", KEY_SCROLL = "os-nav-scroll";
+    function load(store, key, dflt) { try { var v = window[store].getItem(key); return v === null ? dflt : JSON.parse(v); } catch (e) { return dflt; } }
+    function save(store, key, val) { try { window[store].setItem(key, JSON.stringify(val)); } catch (e) { /* storage blocked: work without memory */ } }
+    function clean(p) { return (p || "").replace(/\/+$/, "") || "/"; }
+    function seg(p) { return clean(p).split("/")[1] || ""; }
+    function linkPath(a) { return clean((a.getAttribute("href") || "").split("?")[0]); }
+    function label(el) { return (el.textContent || "").trim().replace(/\s+/g, " "); }
+
+    /* groups = <div x-data> holding a toggle <a> and a <div> of sub links */
+    var groups = [].slice.call(nav.querySelectorAll("div[x-data]")).filter(function (g) {
+        return g.querySelector(":scope > a") && g.querySelector(":scope > div");
+    });
+    groups.forEach(function (g) { g.dataset.osGroup = label(g.querySelector(":scope > a")); });
+    var links = [].slice.call(nav.querySelectorAll("a[href]")).filter(function (a) {
+        var h = a.getAttribute("href"); return h && h !== "#";
+    });
+    function isToggle(a) { return a.hasAttribute("@click.prevent"); }
+
+    /* ---------- 1. find "you are here" ---------- */
+    var path = clean(location.pathname), query = location.search;
+    var best = null, bestScore = -1;
+    links.forEach(function (a) {
+        var h = linkPath(a);
+        if (h === "/" || !(path === h || path.indexOf(h + "/") === 0)) { return; }
+        var score = h.length * 10;
+        var q = (a.getAttribute("href").split("?")[1] || "");
+        if (path === h) { score += 5; }
+        if (q && q.split("&").every(function (kv) { return query.indexOf(kv) !== -1; })) { score += 3; }
+        if (isToggle(a)) { score -= 1; }   /* a group heading only wins when no sub link matches as well */
+        if (score >= bestScore) { best = a; bestScore = score; }   /* ties: later (sub-menu) link wins */
+    });
+    /* detail pages: prefer the menu entry you came from when it is in the same section
+       (e.g. Open Findings -> /finding/123 keeps "Open Findings" lit, not "All Findings") */
+    var last = load("sessionStorage", KEY_LAST, null);
+    var lastLink = last && links.filter(function (a) { return !isToggle(a) && a.getAttribute("href") === last; })[0];
+    var exact = best && linkPath(best) === path;
+    if (lastLink && !exact && seg(linkPath(lastLink)) === seg(path) &&
+        (seg(path) !== "orasec" || linkPath(lastLink).split("/")[2] === path.split("/")[2])) {
+        best = lastLink;
+    }
+    /* sections whose pages have no menu entry of their own */
+    if (!best) {
+        var alias = { product: "/asset", technology: "/asset", product_platform: "/asset", product_origin: "/asset",
+                      product_lifecycle: "/asset", test: "/engagement", endpoints: "/endpoint",
+                      empty_questionnaire: "/questionnaire", general_questionnaire: "/questionnaire" };
+        var orasecAlias = { runs: "/orasec/connectors", jobs: "/orasec/diagnostics", findings: "/orasec/vulnerabilities" };
+        var target = alias[seg(path)] || (seg(path) === "orasec" && orasecAlias[path.split("/")[2]]);
+        if (!target && lastLink && document.referrer.indexOf(location.origin) === 0) { best = lastLink; }
+        if (target) { best = links.filter(function (a) { return linkPath(a) === target; }).pop() || null; }
+    }
+
+    /* ---------- 2. open groups: the one you are in + the ones you left open ---------- */
+    var open = load("localStorage", KEY_OPEN, []);
+    if (!Array.isArray(open)) { open = []; }
+    var activeGroup = null;
+    if (best) {
+        if (!isToggle(best)) { best.classList.add("os-active"); best.setAttribute("aria-current", "page"); }
+        activeGroup = best.closest("div[data-os-group]");
+        if (activeGroup) { activeGroup.querySelector(":scope > a").classList.add("os-active-parent"); }
+    }
+    groups.forEach(function (g) {
+        var isOpen = g === activeGroup || open.indexOf(g.dataset.osGroup) !== -1;
+        g.setAttribute("x-data", "{ open: " + (isOpen ? "true" : "false") + " }");
+        var t = g.querySelector(":scope > a");
+        t.setAttribute(":aria-expanded", "open ? 'true' : 'false'");
+        t.addEventListener("click", function () {
+            /* Alpine flips `open` on the same click; mirror it in storage */
+            var now = load("localStorage", KEY_OPEN, []), k = g.dataset.osGroup, i = now.indexOf(k);
+            var willOpen = !g.querySelector(":scope > div").offsetParent;  /* hidden now -> about to open */
+            if (willOpen && i === -1) { now.push(k); }
+            if (!willOpen && i !== -1) { now.splice(i, 1); }
+            save("localStorage", KEY_OPEN, now);
+        });
+    });
+
+    /* ---------- 3. remember the clicked entry + rail scroll ---------- */
+    links.forEach(function (a) {
+        if (isToggle(a)) { return; }
+        a.addEventListener("click", function () {
+            save("sessionStorage", KEY_LAST, a.getAttribute("href"));
+            save("sessionStorage", KEY_SCROLL, side.scrollTop);
+        });
+    });
+    window.addEventListener("pagehide", function () { save("sessionStorage", KEY_SCROLL, side.scrollTop); });
+    function reveal() {
+        var y = load("sessionStorage", KEY_SCROLL, 0);
+        if (typeof y === "number") { side.scrollTop = y; }
+        var tgt = best && (best.offsetParent ? best : activeGroup && activeGroup.querySelector(":scope > a"));
+        if (tgt) {
+            var r = tgt.getBoundingClientRect(), s = side.getBoundingClientRect();
+            if (r.top < s.top + 60 || r.bottom > s.bottom - 20) { side.scrollTop += r.top - s.top - s.height / 3; }
+        }
+    }
+    /* after Alpine has shown the open groups (no transition on first paint) */
+    document.addEventListener("alpine:initialized", function () { requestAnimationFrame(reveal); });
+    window.addEventListener("load", function () { setTimeout(reveal, 0); });
+
+    /* ---------- 4. narrow screens: off-canvas rail ---------- */
+    var btn = document.getElementById("os-nav-toggle"), shade = document.getElementById("os-nav-backdrop");
+    function setMenu(on) {
+        document.body.classList.toggle("os-nav-shown", on);
+        if (btn) { btn.setAttribute("aria-expanded", on ? "true" : "false"); }
+        if (on) { requestAnimationFrame(reveal); }
+    }
+    if (btn) { btn.addEventListener("click", function () { setMenu(!document.body.classList.contains("os-nav-shown")); }); }
+    if (shade) { shade.addEventListener("click", function () { setMenu(false); }); }
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && document.body.classList.contains("os-nav-shown")) { setMenu(false); if (btn) { btn.focus(); } } });
+    window.matchMedia("(min-width: 1024px)").addEventListener("change", function (m) { if (m.matches) { setMenu(false); } });
+})();
+</script>
+

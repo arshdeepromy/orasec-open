@@ -1,0 +1,5 @@
+{% load ora_tags %}{% if request.user.is_authenticated and request.user.is_active %}{% ora_asset_version as ora_v %}
+<link rel="stylesheet" href="{% url 'orasec_ora_asset' 'ora.css' %}?v={{ ora_v }}">
+<script>window.ORA_BOOT = { csrf: "{{ csrf_token }}", api: "{% url 'orasec_ora_status' %}".replace(/status\/$/, "") };</script>
+<script defer src="{% url 'orasec_ora_asset' 'ora.js' %}?v={{ ora_v }}"></script>
+{% endif %}

@@ -1,0 +1,43 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Diagnostics | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "Diagnostics" %}</h1><div class="sub">{% trans "Connector, intelligence-feed, import, rule and approval health in one place." %}</div></div>
+{% if request.user.is_superuser %}
+<div style="display:flex;gap:.4rem;flex-wrap:wrap">
+  <form method="post" action="{% url 'orasec_run_job' 'connectors' %}">{% csrf_token %}<button class="btn">{% trans "Run due connectors" %}</button></form>
+  <form method="post" action="{% url 'orasec_run_job' 'intel' %}">{% csrf_token %}<button class="btn">{% trans "Refresh KEV/EPSS" %}</button></form>
+  <form method="post" action="{% url 'orasec_run_job' 'priorities' %}">{% csrf_token %}<button class="btn">{% trans "Recompute priorities & rules" %}</button></form>
+  <form method="post" action="{% url 'orasec_run_job' 'posture' %}">{% csrf_token %}<button class="btn btn-p">{% trans "Evaluate controls & snapshot" %}</button></form>
+</div>
+{% endif %}
+</div>
+<div class="grid g2">
+  <div class="card"><h2>{% trans "Connectors" %}</h2>
+    <table class="t"><thead><tr><th>{% trans "Connector" %}</th><th>{% trans "Status" %}</th><th>{% trans "Last run" %}</th><th>{% trans "Message" %}</th></tr></thead><tbody>
+    {% for c in connectors %}<tr><td><a class="lk" href="{% url 'orasec_connector_detail' c.id %}">{{ c.name }}</a></td><td><span class="b b-{{ c.last_status }}">{{ c.last_status }}</span></td>
+    <td class="muted">{{ c.last_run_at|date:"j M H:i"|default:"—" }}</td><td style="font-size:.8rem">{{ c.last_message|truncatechars:110 }}</td></tr>
+    {% empty %}<tr><td colspan="4" class="empty">—</td></tr>{% endfor %}</tbody></table>
+  </div>
+  <div class="card"><h2>{% trans "Intelligence feeds & engines" %}</h2>
+    <table class="t"><tbody>
+    {% for f in feeds %}<tr><td>{{ f.name|upper }}</td><td><span class="b b-{{ f.status }}">{{ f.status }}</span></td><td class="num">{{ f.records }}</td><td class="muted">{{ f.last_refreshed|date:"j M H:i"|default:"—" }}</td><td style="font-size:.8rem">{{ f.message|truncatechars:80 }}</td></tr>
+    {% empty %}<tr><td colspan="5" class="muted">{% trans "Feeds not refreshed yet." %}</td></tr>{% endfor %}
+    <tr><td>{% trans "Priorities" %}</td><td colspan="2"></td><td class="muted">{{ priorities.computed_at|date:"j M H:i"|default:"—" }}</td><td></td></tr>
+    <tr><td>{% trans "Control checks" %}</td><td colspan="2"></td><td class="muted">{% for c in control_checks %}{{ c.auto_evaluated_at|date:"j M H:i"|default:"—" }}{% empty %}—{% endfor %}</td><td></td></tr>
+    <tr><td>{% trans "Triage rules" %}</td><td colspan="2">{{ rules|length }} {% trans "rules" %}</td><td class="muted">{{ rule_hits_24h }} {% trans "hits / 24h" %}</td><td></td></tr>
+    <tr><td>{% trans "Risk approvals" %}</td><td colspan="2"><span class="b {% if pending_approvals %}b-pending{% else %}b-ok{% endif %}">{{ pending_approvals }} {% trans "pending" %}</span></td><td></td><td></td></tr>
+    </tbody></table>
+  </div>
+</div>
+<div class="card" style="margin-top:1rem"><h2>{% trans "Recent connector errors and warnings" %}</h2>
+<table class="t"><thead><tr><th>{% trans "When" %}</th><th>{% trans "Connector" %}</th><th>{% trans "Status" %}</th><th>{% trans "Detail" %}</th></tr></thead><tbody>
+{% for r in errors %}<tr><td><a class="lk" href="{% url 'orasec_run' r.id %}">{{ r.started_at|date:"j M H:i" }}</a></td><td>{{ r.connector.name }}</td><td><span class="b b-{{ r.status }}">{{ r.status }}</span></td>
+<td style="font-size:.8rem">{% if r.error %}{{ r.error|truncatechars:200 }}{% else %}{% for l in r.log.splitlines %}{% if "WARNING" in l %}{{ l }}<br>{% endif %}{% endfor %}{% endif %}</td></tr>
+{% empty %}<tr><td colspan="4" class="empty">{% trans "No errors." %}</td></tr>{% endfor %}</tbody></table></div>
+<div class="card" style="margin-top:1rem"><h2>{% trans "Recent imports" %}</h2>
+<table class="t"><thead><tr><th>{% trans "When" %}</th><th>{% trans "Asset" %}</th><th>{% trans "Test" %}</th><th>{% trans "Type" %}</th></tr></thead><tbody>
+{% for i in imports %}<tr><td class="muted">{{ i.created|date:"j M H:i" }}</td><td>{{ i.test.engagement.product.name }}</td><td><a class="lk" href="{% url 'view_test' i.test.id %}">{{ i.test }}</a></td><td>{{ i.import_settings.scan_type|default:i.type }}</td></tr>
+{% empty %}<tr><td colspan="4" class="empty">—</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}
+

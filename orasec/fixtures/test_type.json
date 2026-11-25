@@ -1,0 +1,58 @@
+[
+    {
+        "fields": {
+            "name": "API Test"
+        },
+        "model": "orasec.test_type",
+        "pk": 1
+    },
+    {
+        "fields": {
+            "name": "Static Check"
+        },
+        "model": "orasec.test_type",
+        "pk": 2
+    },
+    {
+        "fields": {
+            "name": "Pen Test"
+        },
+        "model": "orasec.test_type",
+        "pk": 3
+    },
+    {
+        "fields": {
+            "name": "Web Application Test"
+        },
+        "model": "orasec.test_type",
+        "pk": 4
+    },
+    {
+        "fields": {
+            "name": "Security Research"
+        },
+        "model": "orasec.test_type",
+        "pk": 5
+    },
+    {
+        "fields": {
+            "name": "Threat Modeling"
+        },
+        "model": "orasec.test_type",
+        "pk": 6
+    },
+    {
+        "fields": {
+            "name": "Manual Code Review"
+        },
+        "model": "orasec.test_type",
+        "pk": 7
+    },
+    {
+        "fields": {
+            "name": "Prowler"
+        },
+        "model": "orasec.test_type",
+        "pk": 8
+    }
+]

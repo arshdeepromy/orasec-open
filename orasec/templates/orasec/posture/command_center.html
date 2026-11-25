@@ -1,0 +1,165 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n static %}
+{% block title %}Command Center | OraSec{% endblock %}
+{% block posture %}
+<style>
+  .cc { background:linear-gradient(180deg,#121918 0%,#0e1413 100%); color:#dfece9; border-radius:16px; border:1px solid #233230; padding:1.1rem 1.2rem 1.3rem; }
+  .cc.tv { position:fixed; inset:0; z-index:9999; border-radius:0; overflow:auto; padding:1.4rem 2rem; }
+  .cc-h { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+  .cc-h h2 { color:#fff; font-size:1.25rem; font-weight:700; margin:0; }
+  .cc-h .s { color:#8aa49f; font-size:.8rem; }
+  .seg { display:inline-flex; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:2px; }
+  .seg a { color:#9fb5b0; font-size:.78rem; font-weight:600; padding:.3rem .65rem; border-radius:6px; text-decoration:none; }
+  .seg a.on { background:#00a890; color:#fff; }
+  .cbtn { background:rgba(255,255,255,.07); color:#e7f3f0; border:1px solid rgba(255,255,255,.13); border-radius:7px; padding:.32rem .7rem; font-size:.78rem; cursor:pointer; text-decoration:none; display:inline-flex; gap:.35rem; align-items:center; }
+  .cbtn:hover { background:rgba(255,255,255,.14); color:#fff; }
+  .flow { position:relative; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:.6rem; }
+  .flow svg { width:100%; height:auto; display:block; }
+  .fl-t { fill:#e9f4f1; font-size:12.5px; font-weight:600; } .fl-n { fill:#fff; font-size:13px; font-weight:700; font-family:"IBM Plex Mono",ui-monospace,monospace; }
+  .fl-s { fill:#8aa49f; font-size:10.5px; } .fl-h { fill:#8aa49f; font-size:10px; font-weight:700; letter-spacing:.08em; }
+  .rib { mix-blend-mode:screen; transition:opacity .2s; } .rib:hover { opacity:1 !important; }
+  .kstrip { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.6rem; margin-top:1rem; }
+  .kstrip div.k { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:11px; padding:.65rem .8rem; }
+  .k .l { font-size:.66rem; text-transform:uppercase; letter-spacing:.07em; color:#8aa49f; font-weight:700; }
+  .k .v { font-size:1.55rem; font-weight:700; color:#fff; font-variant-numeric:tabular-nums; line-height:1.2; margin-top:.15rem; }
+  .k .d { font-size:.72rem; color:#8aa49f; margin-top:.1rem; }
+  .ins { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:.6rem; margin-top:1rem; }
+  .ins a { display:block; text-decoration:none; border-radius:11px; padding:.7rem .85rem .75rem; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-left:3px solid #3fd3be; color:#dfece9; transition:background .15s; }
+  .ins a:hover { background:rgba(255,255,255,.08); }
+  .ins .t { font-weight:700; color:#fff; font-size:.88rem; } .ins .b2 { font-size:.78rem; color:#a9bdb8; margin-top:.2rem; line-height:1.4; }
+  .ins .tag { font-size:.62rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; margin-bottom:.25rem; }
+  .tone-action { border-left-color:#d8a800 !important; } .tone-action .tag { color:#d8a800; }
+  .tone-risk { border-left-color:#e0594f !important; } .tone-risk .tag { color:#f08a80; }
+  .tone-gov { border-left-color:#8fc6b4 !important; } .tone-gov .tag { color:#8fc6b4; }
+  .tone-good .tag { color:#3fd3be; } .tone-info { border-left-color:#7fb6f0 !important; } .tone-info .tag { color:#7fb6f0; }
+  .cc-low { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr); gap:1rem; margin-top:1rem; }
+  @media (max-width:1100px) { .cc-low { grid-template-columns:1fr; } }
+  .pn { background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:.8rem .9rem; }
+  .pn h3 { font-size:.7rem; text-transform:uppercase; letter-spacing:.07em; color:#8aa49f; margin:0 0 .55rem; font-weight:800; }
+  table.dk { width:100%; border-collapse:collapse; font-size:.8rem; }
+  table.dk th { text-align:left; color:#8aa49f; font-size:.66rem; text-transform:uppercase; letter-spacing:.05em; padding:.35rem .4rem; border-bottom:1px solid rgba(255,255,255,.1); }
+  table.dk td { padding:.4rem; border-bottom:1px solid rgba(255,255,255,.05); vertical-align:top; }
+  table.dk a { color:#e9f4f1; text-decoration:none; } table.dk a:hover { color:#3fd3be; }
+  .bd { display:inline-block; padding:.05rem .45rem; border-radius:99px; font-size:.68rem; font-weight:700; white-space:nowrap; }
+  .bd-Urgent { background:#5c1c18; color:#ffb4ac; } .bd-NeedsAction { background:#5a3510; color:#ffc58a; } .bd-Medium { background:#4d4210; color:#f3d36b; } .bd-Low { background:#1b3550; color:#9cc7f5; }
+  .bd-kev { background:#7f1d1d; color:#fff; } .bd-ok { background:#173d2c; color:#7ee2b0; } .bd-error,.bd-fail { background:#5c1c18; color:#ffb4ac; } .bd-never,.bd-partial { background:#4d4210; color:#f3d36b; }
+  .chn { display:flex; justify-content:space-between; align-items:center; padding:.32rem 0; border-bottom:1px solid rgba(255,255,255,.05); font-size:.8rem; }
+  .chn .m { color:#8aa49f; font-size:.7rem; }
+  .spark { width:100%; height:90px; }
+</style>
+
+<div class="cc{% if wall %} tv{% endif %}" id="cc">
+  <div class="cc-h">
+    <div><h2>{% trans "Command Center" %}</h2><div class="s">{% now "l j F Y, H:i" %} · {{ ORG_NAME }} · {% blocktrans with d=cc.days %}last {{ d }} days{% endblocktrans %}</div></div>
+    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap" class="noprint">
+      <div class="seg">{% for r, d in ranges %}<a href="?range={{ r }}{% if wall %}&wall=1{% endif %}" class="{% if d == cc.days %}on{% endif %}">{{ r }}</a>{% endfor %}</div>
+      <a class="cbtn" href="{% url 'orasec_attacks' %}"><i class="fa-solid fa-earth-oceania"></i> {% trans "Attacks" %}</a>
+      <a class="cbtn" href="{% url 'orasec_topology' %}"><i class="fa-solid fa-diagram-project"></i> {% trans "Topology" %}</a>
+      <a class="cbtn" href="{% url 'orasec_insights_view' 'executive' %}"><i class="fa-solid fa-chart-line"></i> {% trans "Insights" %}</a>
+      <button class="cbtn" id="tvb" type="button"><i class="fa-solid fa-tv"></i> {% if wall %}{% trans "Exit TV" %}{% else %}{% trans "Present on TV" %}{% endif %}</button>
+    </div>
+  </div>
+
+  <div class="flow"><svg id="flow" viewBox="0 0 1200 430" role="img" aria-label="{% trans 'Findings flow from sources through the posture score to priority bands' %}"></svg></div>
+
+  <div class="kstrip">{% for k in cc.kpis %}<div class="k"><div class="l">{{ k.label }}</div><div class="v">{{ k.value }}</div><div class="d">{{ k.hint }}</div></div>{% endfor %}</div>
+
+  <div class="ins">{% for i in cc.insights %}<a href="{{ i.link }}" class="tone-{{ i.tone }}"><div class="tag">{% if i.tone == "action" %}{% trans "Fix first" %}{% elif i.tone == "risk" %}{% trans "Risk" %}{% elif i.tone == "gov" %}{% trans "Governance" %}{% elif i.tone == "good" %}{% trans "Trend" %}{% else %}{% trans "Threats" %}{% endif %}</div>
+    <div class="t">{{ i.title }}</div><div class="b2">{{ i.body }}</div></a>{% endfor %}</div>
+
+  <div class="cc-low">
+    <div class="pn"><h3>{% trans "Fix first — highest priority" %}</h3>
+      {% if top %}<table class="dk"><thead><tr><th>{% trans "Score" %}</th><th>{% trans "Band" %}</th><th>{% trans "Finding" %}</th><th>{% trans "Asset" %}</th><th>{% trans "Intel" %}</th><th>{% trans "Due" %}</th></tr></thead><tbody>
+      {% for p in top %}<tr><td style="font-weight:700;color:#fff">{{ p.score }}</td><td><span class="bd bd-{{ p.band|cut:' ' }}">{{ p.band }}</span></td>
+        <td><a href="{% url 'view_finding' p.finding.id %}">{{ p.finding.title|truncatechars:80 }}</a></td><td style="color:#a9bdb8">{{ p.finding.test.engagement.product.name }}</td>
+        <td>{% if p.finding.known_exploited %}<span class="bd bd-kev">KEV</span>{% endif %}{% if p.finding.epss_score %} <span style="color:#8aa49f;font-family:'IBM Plex Mono',monospace;font-size:.72rem">EPSS {{ p.finding.epss_score|floatformat:2 }}</span>{% endif %}</td>
+        <td>{% if p.due_date and p.due_date < today %}<span class="bd bd-Urgent">{{ p.due_date|date:"j M" }}</span>{% else %}<span style="color:#a9bdb8">{{ p.due_date|date:"j M" }}</span>{% endif %}</td></tr>{% endfor %}
+      </tbody></table>{% else %}<div style="color:#8aa49f;font-size:.8rem">{% trans "Priorities are computed hourly." %}</div>{% endif %}
+    </div>
+    <div>
+      <div class="pn"><h3>{% trans "Posture trend" %}</h3><svg class="spark" id="spark" viewBox="0 0 300 90" preserveAspectRatio="none"></svg>
+        <div style="display:flex;justify-content:space-between;font-size:.68rem;color:#8aa49f"><span id="sp0"></span><span>{% trans "Posture" %} <b style="color:#3fd3be">—</b> · {% trans "Exposure" %} <b style="color:#d8a800">—</b> · ISO <b style="color:#8fc6b4">—</b></span></div></div>
+      <div class="pn" style="margin-top:.8rem"><h3>{% trans "Data sources" %}</h3>
+        {% for c in connectors %}<div class="chn"><span><a href="{% url 'orasec_connector_detail' c.id %}" style="color:#e9f4f1;text-decoration:none">{{ c.name }}</a><div class="m">{{ c.get_kind_display }} · {{ c.last_success_at|timesince|default:"never" }}{% if c.last_success_at %} ago{% endif %}</div></span><span class="bd bd-{{ c.last_status }}">{{ c.get_last_status_display }}</span></div>{% endfor %}
+        {% for f in feeds %}<div class="chn"><span>{{ f.name|upper }} {% trans "feed" %}<div class="m">{{ f.records }} {% trans "records" %} · {{ f.last_refreshed|timesince|default:"never" }}</div></span><span class="bd bd-{{ f.status }}">{{ f.status }}</span></div>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{{ cc_json|json_script:"cc-data" }}
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById("cc-data").textContent);
+  const NS = "http://www.w3.org/2000/svg", svg = document.getElementById("flow");
+  const el = (t, a, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+  const BAND = { "Urgent": "#e0594f", "Needs Action": "#f08a3c", "Medium": "#d8a800", "Low": "#5a8fd0" };
+  const fmt = n => Number(n || 0).toLocaleString();
+  const total = D.sources.reduce((a, s) => a + s.count, 0) || 1;
+  const H = 430, top = 46, avail = H - top - 20, cx = 600, cy = 235, R = 92;
+  const scale = c => Math.max(3, Math.sqrt(c / total) * 70);
+  el("text", { x: 20, y: 24, class: "fl-h" }, svg).textContent = "SOURCES";
+  el("text", { x: cx, y: 24, class: "fl-h", "text-anchor": "middle" }, svg).textContent = "SECURITY POSTURE";
+  el("text", { x: 1180, y: 24, class: "fl-h", "text-anchor": "end" }, svg).textContent = "PRIORITY";
+  const ribs = el("g", {}, svg);
+  // sources (left)
+  const n = D.sources.length || 1, step = avail / n;
+  D.sources.forEach((s, i) => {
+    const y = top + step * i + step / 2, w = scale(s.count);
+    let off = -w / 2;
+    for (const band of ["Urgent", "Needs Action", "Medium", "Low"]) {
+      const c = (s.bands || {})[band]; if (!c) continue;
+      const bw = w * c / s.count, y0 = y + off + bw / 2; off += bw;
+      const ty = cy + (y0 - cy) * .18;
+      el("path", { d: `M300,${y0} C430,${y0} 460,${ty} ${cx - R},${ty}`, fill: "none", stroke: BAND[band], "stroke-width": Math.max(1, bw), "stroke-opacity": .38, class: "rib" }, ribs)
+        .appendChild(Object.assign(document.createElementNS(NS, "title"), { textContent: `${s.label} → ${band}: ${fmt(c)}` }));
+    }
+    el("rect", { x: 18, y: y - 19, width: 278, height: 38, rx: 9, fill: "rgba(255,255,255,.045)", stroke: "rgba(255,255,255,.09)" }, svg);
+    el("text", { x: 32, y: y - 2, class: "fl-t" }, svg).textContent = s.label;
+    el("text", { x: 32, y: y + 12, class: "fl-s" }, svg).textContent = Math.round(100 * s.count / total) + "% of open findings";
+    el("text", { x: 284, y: y + 5, class: "fl-n", "text-anchor": "end" }, svg).textContent = fmt(s.count);
+  });
+  // outcomes (right)
+  const outs = D.outcomes, oStep = avail / outs.length, oTot = outs.reduce((a, o) => a + o.count, 0) || 1;
+  outs.forEach((o, i) => {
+    const y = top + oStep * i + oStep / 2, w = o.count ? Math.max(3, Math.sqrt(o.count / oTot) * 70) : 1.5, ty = cy + (y - cy) * .18;
+    el("path", { d: `M${cx + R},${ty} C${cx + R + 140},${ty} ${880 - 120},${y} 900,${y}`, fill: "none", stroke: BAND[o.band], "stroke-width": w, "stroke-opacity": o.count ? .5 : .15, class: "rib" }, ribs);
+    el("rect", { x: 902, y: y - 24, width: 280, height: 48, rx: 10, fill: "rgba(255,255,255,.045)", stroke: BAND[o.band], "stroke-opacity": .5 }, svg);
+    el("rect", { x: 902, y: y - 24, width: 5, height: 48, rx: 2, fill: BAND[o.band] }, svg);
+    el("text", { x: 920, y: y - 4, class: "fl-t" }, svg).textContent = o.band;
+    el("text", { x: 920, y: y + 12, class: "fl-s" }, svg).textContent = ({ "Urgent": "fix within 7 days", "Needs Action": "fix within 30 days", "Medium": "fix within 90 days", "Low": "fix within 180 days" })[o.band];
+    el("text", { x: 1168, y: y + 7, class: "fl-n", "text-anchor": "end", style: "font-size:18px" }, svg).textContent = fmt(o.count);
+  });
+  // ring
+  const s = D.posture.score, col = s >= 800 ? "#3fd3be" : s >= 600 ? "#8fc6b4" : s >= 400 ? "#d8a800" : "#e0594f";
+  const g = el("g", { transform: `translate(${cx},${cy})` }, svg);
+  el("circle", { r: R + 26, fill: "url(#glow)" }, g);
+  const defs = el("defs", {}, svg), rg = el("radialGradient", { id: "glow" }, defs);
+  el("stop", { offset: "55%", "stop-color": col, "stop-opacity": .18 }, rg); el("stop", { offset: "100%", "stop-color": col, "stop-opacity": 0 }, rg);
+  el("circle", { r: R, fill: "#0f1716", stroke: "rgba(255,255,255,.08)", "stroke-width": 14 }, g);
+  const C = 2 * Math.PI * R, parts = [["vuln", .6, "#3fd3be"], ["compliance", .25, "#8fc6b4"], ["hygiene", .15, "#d8a800"]];
+  let acc = 0;
+  for (const [k, wgt, c] of parts) { const len = C * wgt * (D.posture[k] / 1000);
+    el("circle", { r: R, fill: "none", stroke: c, "stroke-width": 14, "stroke-dasharray": `${Math.max(0, len - 3)} ${C}`, "stroke-dashoffset": -acc, transform: "rotate(-90)", "stroke-linecap": "butt" }, g);
+    acc += C * wgt; }
+  el("text", { y: 6, "text-anchor": "middle", fill: "#fff", style: "font-size:44px;font-weight:700" }, g).textContent = s;
+  el("text", { y: 28, "text-anchor": "middle", class: "fl-s" }, g).textContent = "of 1000";
+  const lab = [["Exposure", D.posture.vuln, "#3fd3be"], ["ISO 27001", D.posture.compliance, "#8fc6b4"], ["Hygiene", D.posture.hygiene, "#d8a800"]];
+  lab.forEach(([t, v, c], i) => { const x = (i - 1) * 92; el("circle", { cx: x - 30, cy: R + 42, r: 4, fill: c }, g);
+    el("text", { x: x - 22, y: R + 46, class: "fl-s" }, g).textContent = `${t} ${v}`; });
+  // trend sparkline
+  const tr = D.trend, sp = document.getElementById("spark");
+  if (tr.length > 1) {
+    const X = i => i * 300 / (tr.length - 1), Y = v => 86 - v / 1000 * 80;
+    for (const [k, c, w] of [["compliance", "#8fc6b4", 1.2], ["vuln", "#d8a800", 1.2], ["score", "#3fd3be", 2.2]])
+      el("polyline", { points: tr.map((p, i) => `${X(i)},${Y(p[k])}`).join(" "), fill: "none", stroke: c, "stroke-width": w, "vector-effect": "non-scaling-stroke" }, sp);
+    document.getElementById("sp0").textContent = tr[0].d;
+  } else { el("text", { x: 150, y: 48, "text-anchor": "middle", fill: "#8aa49f", style: "font-size:11px" }, sp).textContent = "Fills in as daily snapshots accrue (06:50 daily)"; }
+  // TV mode: full screen, refresh every 5 minutes
+  const cc = document.getElementById("cc"), tv = new URLSearchParams(location.search).get("wall") === "1";
+  document.getElementById("tvb").onclick = () => { const q = new URLSearchParams(location.search); if (tv) q.delete("wall"); else q.set("wall", "1"); location.search = q.toString(); };
+  if (tv) { document.addEventListener("click", () => { if (!document.fullscreenElement && cc.requestFullscreen) cc.requestFullscreen().catch(() => {}); }, { once: true });
+    setTimeout(() => location.reload(), 300000); document.addEventListener("keydown", e => { if (e.key === "Escape") { const q = new URLSearchParams(location.search); q.delete("wall"); location.search = q.toString(); } }); }
+})();
+</script>
+{% endblock %}
+

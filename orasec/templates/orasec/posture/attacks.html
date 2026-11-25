@@ -1,0 +1,253 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n static l10n %}
+{% block title %}Attack Map | OraSec{% endblock %}
+{% block posture %}
+<style>
+  .am { background:radial-gradient(ellipse at 30% 40%, #13211f 0%, #0d1312 60%, #0a0e0d 100%); color:#dfece9; border-radius:14px; border:1px solid #233230; padding:1rem 1.1rem 1.2rem; position:relative; }
+  .am.fs { position:fixed; inset:0; z-index:9999; border-radius:0; overflow:auto; }
+  .am-top { display:flex; justify-content:space-between; align-items:center; gap:.8rem; flex-wrap:wrap; margin-bottom:.6rem; }
+  .am-title { font-weight:700; font-size:1.05rem; display:flex; align-items:center; gap:.55rem; }
+  .am-live { width:9px; height:9px; border-radius:50%; background:#e0594f; box-shadow:0 0 0 0 rgba(224,89,79,.7); animation:lv 1.8s infinite; }
+  @keyframes lv { 70% { box-shadow:0 0 0 9px rgba(224,89,79,0); } 100% { box-shadow:0 0 0 0 rgba(224,89,79,0); } }
+  .seg { display:inline-flex; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:2px; }
+  .seg button { background:none; border:0; color:#9fb5b0; font-size:.78rem; font-weight:600; padding:.28rem .6rem; border-radius:6px; cursor:pointer; }
+  .seg button.on { background:#00a890; color:#fff; }
+  .am-btn { background:rgba(255,255,255,.07); color:#e7f3f0; border:1px solid rgba(255,255,255,.13); border-radius:7px; padding:.3rem .65rem; font-size:.78rem; cursor:pointer; }
+  .am-main { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr); gap:1rem; }
+  @media (max-width: 1100px) { .am-main { grid-template-columns:1fr; } }
+  .globe-box { position:relative; height:100%; min-height:500px; }
+  .globe-box canvas { width:100%; height:100%; display:block; cursor:grab; }
+  .globe-box canvas:active { cursor:grabbing; }
+  .g-tip { position:absolute; pointer-events:none; background:#fcfbf8; color:#201e1a; border-radius:9px; padding:.4rem .6rem; font-size:.78rem; box-shadow:0 8px 24px rgba(0,0,0,.4); display:none; white-space:nowrap; z-index:3; }
+  .g-legend { position:absolute; left:6px; bottom:6px; font-size:.7rem; color:#8aa49f; display:flex; align-items:center; gap:.4rem; }
+  .g-legend .ramp { width:120px; height:7px; border-radius:4px; background:linear-gradient(90deg,#1b6f63,#d8a800,#e0594f); }
+  .g-target { position:absolute; right:6px; bottom:6px; font-size:.7rem; color:#8aa49f; }
+  .kp { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-bottom:.8rem; }
+  .kp div { background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:.6rem .75rem; }
+  .kp .v { font-size:1.6rem; font-weight:700; font-variant-numeric:tabular-nums; color:#fff; line-height:1.15; }
+  .kp .l { font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#8aa49f; }
+  .pnl { background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:.7rem .8rem; margin-bottom:.8rem; }
+  .pnl h3 { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:#8aa49f; margin:0 0 .5rem; font-weight:700; }
+  .crow { display:grid; grid-template-columns:1.6rem 1fr auto; gap:.45rem; align-items:center; font-size:.82rem; padding:.22rem 0; cursor:pointer; }
+  .crow:hover { color:#3fd3be; }
+  .crow .fl { font-size:1.05rem; }
+  .crow .bar { grid-column:2 / 4; height:4px; background:rgba(255,255,255,.07); border-radius:3px; overflow:hidden; margin-top:-.1rem; }
+  .crow .bar span { display:block; height:100%; background:linear-gradient(90deg,#d8a800,#e0594f); }
+  .src-chip { display:inline-block; font-size:.66rem; font-weight:700; padding:.05rem .4rem; border-radius:99px; margin-right:.2rem; text-transform:capitalize; }
+  .s-cloudflare { background:#3a2614; color:#f6a24e; } .s-opnsense { background:#3a1a17; color:#f08a80; } .s-unifi { background:#14283a; color:#7fb6f0; } .s-wazuh { background:#16302c; color:#5fd9c6; } .s-aws { background:#3a2e10; color:#f5c451; }
+  .srow { display:flex; justify-content:space-between; align-items:center; font-size:.8rem; padding:.25rem 0; border-bottom:1px solid rgba(255,255,255,.05); }
+  .tl { display:flex; align-items:flex-end; gap:2px; height:56px; }
+  .tl span { flex:1; background:#00a890; border-radius:2px 2px 0 0; min-height:1px; opacity:.85; }
+  table.ip { width:100%; border-collapse:collapse; font-size:.8rem; }
+  table.ip th { text-align:left; color:#8aa49f; font-size:.68rem; text-transform:uppercase; letter-spacing:.05em; padding:.4rem .45rem; border-bottom:1px solid rgba(255,255,255,.1); white-space:nowrap; }
+  table.ip td { padding:.38rem .45rem; border-bottom:1px solid rgba(255,255,255,.05); vertical-align:top; }
+  table.ip tr:hover td { background:rgba(255,255,255,.03); }
+  .ipm { font-family:"IBM Plex Mono",ui-monospace,monospace; color:#fff; }
+  .feed { max-height:260px; overflow:auto; font-size:.78rem; }
+  .feed div { padding:.3rem 0; border-bottom:1px solid rgba(255,255,255,.05); display:flex; gap:.5rem; align-items:baseline; }
+  .feed .t { color:#8aa49f; font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.72rem; flex:0 0 auto; }
+  .feed .new { animation:flash 2s ease-out; } @keyframes flash { from { background:rgba(224,89,79,.25); } to { background:transparent; } }
+  .am-empty { color:#8aa49f; font-size:.8rem; padding:.8rem 0; }
+  .am a { color:#3fd3be; }
+</style>
+
+<div class="hdr"><div><h1>{% trans "Attack Map" %}</h1>
+<div class="sub">{% trans "Attacks blocked at the edge (Cloudflare), the firewalls (OPNsense, UniFi) and detected by Wazuh, geolocated locally." %}</div></div>
+<a class="btn" href="{% url 'orasec_topology' %}"><i class="fa-solid fa-diagram-project"></i> {% trans "Network Topology" %}</a></div>
+
+<div class="am" id="am">
+  <div class="am-top">
+    <div class="am-title"><span class="am-live"></span>{% trans "Live threat activity" %} <span id="upd" style="font-weight:400;font-size:.75rem;color:#8aa49f"></span></div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+      <div class="seg" id="srcSeg"><button data-s="" class="on">All</button><button data-s="cloudflare">Cloudflare</button><button data-s="opnsense">OPNsense</button><button data-s="unifi">UniFi</button><button data-s="aws">AWS edge</button><button data-s="wazuh">Wazuh</button></div>
+      <div class="seg" id="rngSeg">{% for r in ranges %}<button data-r="{{ r }}"{% if r == "7d" %} class="on"{% endif %}>{{ r }}</button>{% endfor %}</div>
+      <button class="am-btn" id="spin">⟳ {% trans "Auto-rotate" %}</button><button class="am-btn" id="fs">⛶ {% trans "Present on TV" %}</button>
+    </div>
+  </div>
+  <div class="am-main">
+    <div class="globe-box" id="gbox"><canvas id="globe"></canvas><div class="g-tip" id="tip"></div>
+      <div class="g-legend"><span>{% trans "fewer" %}</span><span class="ramp"></span><span>{% trans "more blocked" %}</span></div>
+      <div class="g-target">◎ {% trans "Target" %}: {{ ORG_NAME }}</div></div>
+    <div>
+      <div class="kp">
+        <div><div class="l">{% trans "Blocked / detected" %}</div><div class="v" id="k-total">—</div></div>
+        <div><div class="l">{% trans "Attacker IPs" %}</div><div class="v" id="k-ips">—</div></div>
+        <div><div class="l">{% trans "Countries" %}</div><div class="v" id="k-cc">—</div></div>
+        <div><div class="l">{% trans "Top origin" %}</div><div class="v" id="k-top" style="font-size:1.25rem">—</div></div>
+      </div>
+      <div class="pnl"><h3>{% trans "Top origin countries" %}</h3><div id="ctry"></div></div>
+      <div class="pnl"><h3>{% trans "By source" %}</h3><div id="bysrc"></div></div>
+      <div class="pnl"><h3>{% trans "Activity" %}</h3><div class="tl" id="tl"></div><div style="display:flex;justify-content:space-between;font-size:.66rem;color:#8aa49f;margin-top:.2rem"><span id="tl0"></span><span id="tl1"></span></div></div>
+    </div>
+  </div>
+  <div class="pnl" style="margin:.4rem 0 .6rem"><h3>{% trans "Security alerts" %} <span id="alerts-n"></span>
+      <span id="alerts-feed" style="float:right;font-weight:400;text-transform:none;letter-spacing:0"></span></h3>
+    <div style="overflow:auto;max-height:280px">
+      <table class="ip"><thead><tr><th>{% trans "When" %}</th><th>{% trans "Machine" %}</th><th>{% trans "What was detected" %}</th><th>{% trans "From" %}</th><th class="num">{% trans "Level" %}</th><th>{% trans "Seen by" %}</th></tr></thead><tbody id="alerts"></tbody></table>
+      <div class="am-empty" id="alerts-empty" style="display:none">{% trans "No suspected hack or unauthorised action in this range." %}</div></div></div>
+  <div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:1rem;margin-top:.4rem" class="am-low">
+    <div class="pnl" style="margin:0"><h3>{% trans "Attacker IPs" %}</h3><div style="overflow:auto;max-height:420px">
+      <table class="ip"><thead><tr><th></th><th>{% trans "IP" %}</th><th>{% trans "Country" %}</th><th>{% trans "Network (ASN)" %}</th><th>{% trans "Seen by" %}</th><th>{% trans "Action" %}</th><th>{% trans "Target / port" %}</th><th>{% trans "Rule" %}</th><th class="num">{% trans "Hits" %}</th><th>{% trans "Last seen" %}</th></tr></thead><tbody id="ips"></tbody></table>
+      <div class="am-empty" id="ips-empty" style="display:none"></div></div></div>
+    <div class="pnl" style="margin:0"><h3>{% trans "Live feed" %}</h3><div class="feed" id="feed"></div></div>
+  </div>
+</div>
+
+<script src="{% static 'orasec/vendor/geo/d3.min.js' %}"></script>
+<script src="{% static 'orasec/vendor/geo/topojson-client.min.js' %}"></script>
+<script>
+(async function () {
+  const API = "{% url 'orasec_attacks_api' %}", GEO = "{% static 'orasec/vendor/geo/' %}";
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const fmt = n => Number(n || 0).toLocaleString();
+  const ago = t => { const s = (Date.now() - new Date(t)) / 1000; return s < 90 ? Math.round(s) + "s ago" : s < 5400 ? Math.round(s / 60) + "m ago" : s < 129600 ? Math.round(s / 3600) + "h ago" : Math.round(s / 86400) + "d ago"; };
+  const [world, codes] = await Promise.all([fetch(GEO + "countries-110m.json").then(r => r.json()), fetch(GEO + "countries.json").then(r => r.json())]);
+  const feats = topojson.feature(world, world.objects.countries).features;
+  const byA2 = {};
+  for (const f of feats) { const c = codes[f.id]; f.a2 = c ? c[0] : ""; f.cname = c ? c[1] : (f.properties && f.properties.name) || ""; if (f.a2) byA2[f.a2] = f; }
+  const centroid = {}; for (const f of feats) if (f.a2) centroid[f.a2] = d3.geoCentroid(f);
+  // territories too small for the 1:110m map
+  Object.assign(centroid, Object.fromEntries(Object.entries({ HK: [114.17, 22.32], SG: [103.82, 1.35], MO: [113.55, 22.19], BH: [50.56, 26.07], MT: [14.44, 35.9],
+    MU: [57.55, -20.25], MV: [73.22, 3.2], BB: [-59.54, 13.19], AD: [1.52, 42.51], MC: [7.42, 43.74], LI: [9.55, 47.16], SM: [12.45, 43.94], GI: [-5.35, 36.14],
+    JE: [-2.13, 49.21], GG: [-2.58, 49.45], IM: [-4.55, 54.24], PR: [-66.59, 18.22], SC: [55.49, -4.68], KN: [-62.78, 17.36], AG: [-61.8, 17.06] }).filter(([k]) => !centroid[k])));
+  const NAME = {}; for (const v of Object.values(codes)) NAME[v[0]] = v[1];
+  const cname = cc => (byA2[cc] || {}).cname || NAME[cc] || cc;
+  // small countries/territories missing at 1:110m fall back to the country-name lookup
+  const borders = topojson.mesh(world, world.objects.countries, (a, b) => a !== b);
+  const sphere = { type: "Sphere" }, grat = d3.geoGraticule10();
+
+  const box = document.getElementById("gbox"), cv = document.getElementById("globe"), ctx = cv.getContext("2d"), tip = document.getElementById("tip");
+  const proj = d3.geoOrthographic().clipAngle(90).precision(0.4), path = d3.geoPath(proj, ctx);
+  let W = 0, H = 0, R = 0, dpr = Math.min(2, window.devicePixelRatio || 1);
+  let rot = [-150, 15, 0], spin = true, data = null, intensity = {}, maxHits = 1, arcs = [], hover = null, src = "", rng = "7d", seen = new Set();
+  const TARGET = [{{ attack_target.lon|unlocalize }}, {{ attack_target.lat|unlocalize }}], HOME = "{{ attack_target.country|escapejs }}";
+  const ramp = d3.interpolateRgbBasis(["#1b6f63", "#d8a800", "#e0594f"]);
+
+  function size() { const r = box.getBoundingClientRect(); W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); R = Math.min(W, H) / 2 - 18; proj.scale(R).translate([W / 2, H / 2]); }
+  new ResizeObserver(size).observe(box); size();
+
+  const visible = p => d3.geoDistance(p, [-rot[0], -rot[1]]) < Math.PI / 2 - 0.02;
+  function lifted(p, h) { const xy = proj(p); if (!xy) return null; const cx = W / 2, cy = H / 2; return [cx + (xy[0] - cx) * (1 + h), cy + (xy[1] - cy) * (1 + h)]; }
+
+  function draw(now) {
+    proj.rotate(rot);
+    ctx.clearRect(0, 0, W, H);
+    // atmosphere glow
+    const g0 = ctx.createRadialGradient(W / 2, H / 2, R * .92, W / 2, H / 2, R * 1.18); g0.addColorStop(0, "rgba(63,211,190,.22)"); g0.addColorStop(1, "rgba(63,211,190,0)");
+    ctx.fillStyle = g0; ctx.beginPath(); ctx.arc(W / 2, H / 2, R * 1.18, 0, 2 * Math.PI); ctx.fill();
+    // ocean with lighting from the upper left (3D shading)
+    const g1 = ctx.createRadialGradient(W / 2 - R * .35, H / 2 - R * .4, R * .1, W / 2, H / 2, R); g1.addColorStop(0, "#1c3f3a"); g1.addColorStop(1, "#08130f");
+    ctx.beginPath(); path(sphere); ctx.fillStyle = g1; ctx.fill();
+    ctx.beginPath(); path(grat); ctx.strokeStyle = "rgba(143,198,180,.08)"; ctx.lineWidth = .6; ctx.stroke();
+    // countries
+    for (const f of feats) {
+      const v = intensity[f.a2];
+      ctx.beginPath(); path(f);
+      ctx.fillStyle = v ? ramp(Math.log(1 + v) / Math.log(1 + maxHits)) : (HOME && f.a2 === HOME ? "#24584f" : "#1a2a27");
+      ctx.fill();
+      if (hover === f) { ctx.strokeStyle = "#fcfbf8"; ctx.lineWidth = 1.4; ctx.stroke(); }
+    }
+    ctx.beginPath(); path(borders); ctx.strokeStyle = "rgba(10,20,18,.9)"; ctx.lineWidth = .5; ctx.stroke();
+    // terminator-style rim shading
+    const g2 = ctx.createRadialGradient(W / 2 - R * .3, H / 2 - R * .35, R * .5, W / 2, H / 2, R * 1.02); g2.addColorStop(0, "rgba(0,0,0,0)"); g2.addColorStop(1, "rgba(0,0,0,.55)");
+    ctx.beginPath(); path(sphere); ctx.fillStyle = g2; ctx.fill();
+    // arcs (lifted great circles with travelling comets)
+    const t = now / 1000;
+    for (const a of arcs) {
+      const n = 48, pts = [];
+      for (let i = 0; i <= n; i++) { const p = a.interp(i / n); pts.push(visible(p) ? lifted(p, a.h * Math.sin(Math.PI * i / n)) : null); }
+      ctx.lineWidth = a.w; ctx.strokeStyle = `rgba(224,89,79,${a.fresh ? .55 : .22})`;
+      ctx.beginPath(); let pen = false; for (const q of pts) { if (!q) { pen = false; continue; } pen ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); pen = true; } ctx.stroke();
+      const ph = ((t * a.speed + a.phase) % 1.25), head = Math.min(1, ph);
+      if (ph <= 1) {
+        const seg = 10, i1 = Math.round(head * n), i0 = Math.max(0, i1 - seg);
+        for (let i = i0; i < i1; i++) { const p = pts[i], q = pts[i + 1]; if (!p || !q) continue; const k = (i - i0) / seg;
+          ctx.strokeStyle = `rgba(255,${Math.round(150 + 80 * k)},${Math.round(90 + 60 * k)},${.15 + .85 * k})`; ctx.lineWidth = a.w + 1.6 * k; ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); }
+        const hp = pts[i1]; if (hp) { ctx.fillStyle = "#fff4d6"; ctx.beginPath(); ctx.arc(hp[0], hp[1], 2.2 + a.w * .6, 0, 7); ctx.fill(); }
+      } else if (ph < 1.25 && visible(TARGET)) { const p = proj(TARGET), k = (ph - 1) / .25; ctx.strokeStyle = `rgba(224,89,79,${1 - k})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p[0], p[1], 4 + 16 * k, 0, 7); ctx.stroke(); }
+      const sp = pts[0]; if (sp) { ctx.fillStyle = "rgba(224,89,79,.9)"; ctx.beginPath(); ctx.arc(sp[0], sp[1], 2.4, 0, 7); ctx.fill(); }
+    }
+    // target
+    if (visible(TARGET)) { const p = proj(TARGET), k = (t % 2) / 2;
+      ctx.strokeStyle = `rgba(63,211,190,${1 - k})`; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(p[0], p[1], 5 + 18 * k, 0, 7); ctx.stroke();
+      ctx.fillStyle = "#3fd3be"; ctx.beginPath(); ctx.arc(p[0], p[1], 4.2, 0, 7); ctx.fill(); ctx.strokeStyle = "#0a0e0d"; ctx.lineWidth = 1.2; ctx.stroke(); }
+    if (spin && !dragging) rot[0] = (rot[0] + 0.06) % 360;
+    requestAnimationFrame(draw);
+  }
+
+  // drag to rotate, hover for country details
+  let dragging = false, d0 = null;
+  cv.addEventListener("pointerdown", e => { dragging = true; d0 = [e.clientX, e.clientY, rot[0], rot[1]]; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointerup", () => { dragging = false; });
+  cv.addEventListener("pointermove", e => {
+    const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    if (dragging) { const k = 75 / R; rot[0] = d0[2] + (e.clientX - d0[0]) * k; rot[1] = Math.max(-70, Math.min(70, d0[3] - (e.clientY - d0[1]) * k)); return; }
+    const ll = proj.invert([x, y]); hover = ll && Math.hypot(x - W / 2, y - H / 2) < R ? feats.find(f => d3.geoContains(f, ll)) || null : null;
+    if (hover) { const c = (data && data.countries.find(c => c.src_country === hover.a2)) || null;
+      tip.innerHTML = `<b>${esc(flag(hover.a2))} ${esc(hover.cname)}</b><br>${c ? fmt(c.hits) + " blocked · " + (c.ips || 0) + " IPs · " + c.sources.join(", ") : "no recorded attacks"}`;
+      tip.style.display = "block"; tip.style.left = Math.min(x + 14, W - 200) + "px"; tip.style.top = (y + 12) + "px"; } else tip.style.display = "none";
+  });
+  cv.addEventListener("pointerleave", () => { hover = null; tip.style.display = "none"; });
+  const flag = cc => cc && cc.length === 2 ? String.fromCodePoint(...[...cc.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)) : "";
+  function focus(cc) { const c = centroid[cc]; if (!c) return; spin = false; const from = rot.slice(), to = [-c[0], -c[1] * .6, 0], i = d3.interpolate(from, to);
+    d3.timer(function (el) { const k = Math.min(1, el / 900); rot = i(d3.easeCubicInOut(k)); return k >= 1; }); }
+
+  function build() {
+    intensity = {}; maxHits = 1;
+    for (const c of data.countries) { intensity[c.src_country] = c.hits; maxHits = Math.max(maxHits, c.hits); }
+    arcs = data.countries.filter(c => centroid[c.src_country] && c.src_country !== HOME).slice(0, 40).map((c, i) => ({
+      cc: c.src_country, interp: d3.geoInterpolate(centroid[c.src_country], TARGET), h: .08 + .22 * Math.min(1, d3.geoDistance(centroid[c.src_country], TARGET) / Math.PI),
+      w: .8 + 2.2 * Math.log(1 + c.hits) / Math.log(1 + maxHits), speed: .22 + Math.random() * .12, phase: Math.random(), fresh: Date.now() - new Date(c.last) < 3600e3 }));
+    // side panels
+    document.getElementById("k-total").textContent = fmt(data.total);
+    document.getElementById("k-ips").textContent = fmt(data.unique_ips);
+    document.getElementById("k-cc").textContent = fmt(data.countries.length);
+    const top = data.countries[0]; document.getElementById("k-top").innerHTML = top ? `${flag(top.src_country)} ${esc(cname(top.src_country))}` : "—";
+    document.getElementById("ctry").innerHTML = data.countries.slice(0, 10).map(c => `<div class="crow" data-cc="${esc(c.src_country)}"><span class="fl">${flag(c.src_country)}</span>
+      <span>${esc(cname(c.src_country))} <span style="color:#8aa49f;font-size:.72rem">${c.sources.map(s => `<span class="src-chip s-${esc(s)}">${esc(s)}</span>`).join("")}</span></span>
+      <span class="ipm">${fmt(c.hits)}</span><div class="bar"><span style="width:${Math.max(3, 100 * c.hits / maxHits)}%"></span></div></div>`).join("") || `<div class="am-empty">No blocked attacks recorded in this range.</div>`;
+    document.querySelectorAll(".crow").forEach(r => r.onclick = () => focus(r.dataset.cc));
+    const known = ["cloudflare", "unifi", "aws", "opnsense", "wazuh"];
+    document.getElementById("bysrc").innerHTML = known.map(k => { const s = data.by_source.find(x => x.source === k), c = data.connectors[k];
+      return `<div class="srow"><span><span class="src-chip s-${k}">${k}</span> ${c ? "" : '<span style="color:#8aa49f;font-size:.7rem">not connected</span>'}</span><span class="ipm">${s ? fmt(s.hits) : "0"}</span></div>`; }).join("");
+    const tl = data.timeline, mx = Math.max(1, ...tl.map(x => x.hits));
+    document.getElementById("tl").innerHTML = tl.map(x => `<span title="${esc(new Date(x.t).toLocaleString())}: ${x.hits}" style="height:${Math.max(2, 100 * x.hits / mx)}%"></span>`).join("") || '<div class="am-empty">—</div>';
+    document.getElementById("tl0").textContent = new Date(data.since).toLocaleDateString(); document.getElementById("tl1").textContent = "now";
+    const ipr = document.getElementById("ips"), ipe = document.getElementById("ips-empty");
+    ipr.innerHTML = data.ips.map(r => `<tr><td style="font-size:1.05rem">${flag(r.src_country)}</td><td class="ipm">${esc(r.src_ip)}</td><td>${esc(r.src_country ? cname(r.src_country) : "—")}</td>
+      <td>${r.src_asn ? "AS" + esc(r.src_asn) + " " : ""}<span style="color:#8aa49f">${esc(r.src_org || "")}</span></td><td>${r.sources.map(s => `<span class="src-chip s-${esc(s)}">${esc(s)}</span>`).join("")}</td>
+      <td>${esc(r.actions.join(", "))}</td><td>${esc(r.targets.join(", "))}${r.ports.length ? ' <span class="ipm" style="color:#8aa49f">:' + r.ports.join(",") + "</span>" : ""}</td>
+      <td style="max-width:260px">${esc(r.rules.join("; "))}</td><td class="num ipm">${fmt(r.hits)}</td><td style="white-space:nowrap">${ago(r.last)}</td></tr>`).join("");
+    ipe.style.display = data.ips.length ? "none" : "block";
+    ipe.innerHTML = data.ips.length ? "" : `No per-IP events in this range. ${data.total ? "Cloudflare's Free plan reports blocked traffic per country only (shown on the globe). " : ""}IP-level events come from OPNsense firewall logs, UniFi IPS and Wazuh alerts${data.connectors.unifi ? "" : " — connect the UniFi connector to add IPS detections"}.`;
+    // security alerts: a suspected hack or unauthorised action, kept apart from the blocked traffic
+    const al = data.alerts || [], af = data.alert_feed || {}, dim = t => `<span style="color:#8aa49f">${t}</span>`;
+    document.getElementById("alerts").innerHTML = al.map(a => `<tr><td style="white-space:nowrap" title="${esc(new Date(a.t).toLocaleString())}">${ago(a.t)}</td>
+      <td><b>${esc(a.target || "—")}</b></td><td>${esc(a.rule)}</td>
+      <td class="ipm">${a.ip ? flag(a.cc) + " " + esc(a.ip) + (a.internal ? " " + dim("inside the network") : "") : dim("on the machine itself")}</td>
+      <td class="num ipm">${a.level ?? "—"}</td><td><span class="src-chip s-${esc(a.source)}">${esc(a.source)}</span></td></tr>`).join("");
+    document.getElementById("alerts-empty").style.display = al.length ? "none" : "block";
+    document.getElementById("alerts-n").textContent = al.length ? "· " + al.length : "";
+    document.getElementById("alerts-feed").innerHTML = !af.connected ? dim("Wazuh alerts are not being read yet")
+      : af.ok ? dim("Wazuh alerts read " + ago(af.last_ok))
+      : `<span style="color:#e0594f">Wazuh alerts are not being read${af.failing_since ? " since " + esc(new Date(af.failing_since).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })) : ""}</span>`;
+    const feed = document.getElementById("feed");
+    feed.innerHTML = data.recent.map(e => { const id = e.t + e.source + (e.ip || e.cc), fresh = seen.size && !seen.has(id); seen.add(id);
+      return `<div class="${fresh ? "new" : ""}"><span class="t">${new Date(e.t).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+      <span>${flag(e.cc)} <b>${esc(e.ip || cname(e.cc) || "host alert")}</b> → ${esc(e.target || "—")}${e.port ? ":" + e.port : ""} <span class="src-chip s-${esc(e.source)}">${esc(e.source)}</span> ${esc(e.action)}${e.hits > 1 ? " ×" + e.hits : ""}${e.action === "alert" && e.rule ? " · " + esc(e.rule) : ""}</span></div>`; }).join("") || '<div class="am-empty">No events yet.</div>';
+    document.getElementById("upd").textContent = "· updated " + new Date(data.generated).toLocaleTimeString();
+  }
+
+  async function load() { const q = new URLSearchParams({ range: rng }); if (src) q.set("source", src);
+    try { data = await (await fetch(API + "?" + q, { credentials: "same-origin" })).json(); build(); } catch (e) { console.error(e); } }
+  document.querySelectorAll("#srcSeg button").forEach(b => b.onclick = () => { document.querySelectorAll("#srcSeg button").forEach(x => x.classList.toggle("on", x === b)); src = b.dataset.s; load(); });
+  document.querySelectorAll("#rngSeg button").forEach(b => b.onclick = () => { document.querySelectorAll("#rngSeg button").forEach(x => x.classList.toggle("on", x === b)); rng = b.dataset.r; load(); });
+  document.getElementById("spin").onclick = () => { spin = !spin; };
+  const am = document.getElementById("am");
+  document.getElementById("fs").onclick = () => { am.classList.toggle("fs"); if (am.classList.contains("fs") && am.requestFullscreen) am.requestFullscreen().catch(() => {}); else if (document.fullscreenElement) document.exitFullscreen(); setTimeout(size, 200); };
+  document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) { am.classList.remove("fs"); setTimeout(size, 200); } });
+  await load(); requestAnimationFrame(draw); setInterval(load, 30000);
+})();
+</script>
+{% endblock %}
+

@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+{% load i18n static humanize %}
+{% block title %}{% trans "Security Operations" %} | OraSec{% endblock %}
+{% block content %}
+{{ block.super }}
+<style>
+  /* ===== Security Operations dashboard (dark console, same family as the Command Center) ===== */
+  .soc { --bg:#0f1716; --pn:rgba(255,255,255,.035); --ln:rgba(255,255,255,.08); --ln2:rgba(255,255,255,.05); --tx:#e3efec; --hi:#ffffff;
+         --mu:#8aa49f; --mu2:#6d8681; --ac:#2fd0b8; --ac2:#00a890;
+         --s0:#f2555a; --s1:#f5873a; --s2:#e8c440; --s3:#5b9cf0; --s4:#8796a8;
+         background:linear-gradient(180deg,#121a19 0%,#0d1312 100%); color:var(--tx); border:1px solid #22302e; border-radius:16px;
+         padding:1.1rem 1.2rem 1.4rem; margin:.25rem 0 1.5rem; font-variant-numeric:tabular-nums; }
+  .soc a { color:inherit; text-decoration:none; }
+  .soc-h { display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+  .soc-h h1 { font-size:1.3rem; font-weight:700; color:var(--hi); margin:0; letter-spacing:-.01em; display:flex; align-items:center; gap:.55rem; }
+  .soc-h h1 .live { width:.55rem; height:.55rem; border-radius:99px; background:var(--ac); box-shadow:0 0 0 0 rgba(47,208,184,.6); animation:pulse 2.4s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(47,208,184,.55)} 70%{box-shadow:0 0 0 9px rgba(47,208,184,0)} 100%{box-shadow:0 0 0 0 rgba(47,208,184,0)} }
+  @media (prefers-reduced-motion: reduce) { .soc-h h1 .live { animation:none; } }
+  .soc-h .s { color:var(--mu); font-size:.8rem; margin-top:.2rem; }
+  .cbtn { background:rgba(255,255,255,.06); color:#e7f3f0 !important; border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:.36rem .72rem; font-size:.78rem; font-weight:600;
+          cursor:pointer; display:inline-flex; gap:.4rem; align-items:center; }
+  .cbtn:hover { background:rgba(255,255,255,.13); }
+  .g { display:grid; gap:.8rem; }
+  .g-k { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  @media (max-width:900px) { .g-k { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (max-width:520px) { .g-k { grid-template-columns:1fr; } .soc { padding:.8rem .7rem 1rem; } }
+  .g-2 { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+  .g-21 { grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); }
+  @media (max-width:1150px) { .g-2,.g-21 { grid-template-columns:1fr; } }
+  .mt { margin-top:.8rem; }
+  .pn { background:var(--pn); border:1px solid var(--ln); border-radius:13px; padding:.85rem .95rem; min-width:0; }
+  .pn-h { display:flex; justify-content:space-between; align-items:baseline; gap:.6rem; margin-bottom:.65rem; }
+  .pn-h h2 { font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--mu); margin:0; font-weight:800; display:flex; gap:.45rem; align-items:center; }
+  .pn-h h2 i { color:var(--ac); font-size:.8rem; }
+  .pn-h a.more { font-size:.74rem; color:var(--ac); font-weight:600; white-space:nowrap; }
+  .pn-h a.more:hover { color:#7ff0de; }
+  /* KPI tiles */
+  .k { background:var(--pn); border:1px solid var(--ln); border-radius:13px; padding:.75rem .85rem .7rem; position:relative; overflow:hidden; display:block; transition:border-color .15s, background .15s; }
+  a.k:hover { border-color:rgba(47,208,184,.45); background:rgba(255,255,255,.055); }
+  .k .l { font-size:.64rem; text-transform:uppercase; letter-spacing:.08em; color:var(--mu); font-weight:800; display:flex; gap:.4rem; align-items:center; }
+  .k .v { font-size:1.7rem; font-weight:700; color:var(--hi); line-height:1.15; margin-top:.2rem; }
+  .k .v small { font-size:.85rem; color:var(--mu); font-weight:600; margin-left:.15rem; }
+  .k .d { font-size:.72rem; color:var(--mu); margin-top:.15rem; }
+  .k.alert { border-color:rgba(242,85,90,.45); background:linear-gradient(180deg,rgba(242,85,90,.12),rgba(242,85,90,.03)); }
+  .k.alert .l { color:#ff9a9d; }
+  .k .bar4 { position:absolute; left:0; top:0; bottom:0; width:3px; }
+  .ring { --p:0; width:58px; height:58px; border-radius:50%; background:conic-gradient(var(--ac) calc(var(--p)*1%), rgba(255,255,255,.08) 0); display:grid; place-items:center; flex-shrink:0; }
+  .ring > span { width:46px; height:46px; border-radius:50%; background:#121a19; display:grid; place-items:center; font-weight:700; font-size:.88rem; color:var(--hi); }
+  /* tables */
+  table.dk { width:100%; border-collapse:collapse; font-size:.8rem; }
+  table.dk th { text-align:left; color:var(--mu); font-size:.64rem; text-transform:uppercase; letter-spacing:.06em; padding:.4rem .45rem; border-bottom:1px solid rgba(255,255,255,.1); font-weight:700; white-space:nowrap; }
+  table.dk td { padding:.45rem; border-bottom:1px solid var(--ln2); vertical-align:middle; }
+  table.dk tr:hover td { background:rgba(255,255,255,.025); }
+  table.dk .n { text-align:right; white-space:nowrap; }
+  table.dk a:hover { color:var(--ac); }
+  .mu { color:var(--mu); } .mu2 { color:var(--mu2); } .hi { color:var(--hi); font-weight:600; }
+  .mono { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.76rem; white-space:nowrap; }
+  .bd { display:inline-block; padding:.06rem .45rem; border-radius:99px; font-size:.66rem; font-weight:700; white-space:nowrap; line-height:1.5; }
+  .bd-kev { background:#7f1d1d; color:#fff; } .bd-epss { background:#4b2a08; color:#ffc58a; } .bd-ok { background:#173d2c; color:#7ee2b0; }
+  .bd-bad { background:#5c1c18; color:#ffb4ac; } .bd-warn { background:#4d4210; color:#f3d36b; } .bd-mut { background:rgba(255,255,255,.07); color:#b9cdc8; }
+  .bd-exp { background:#18324d; color:#9cc7f5; }
+  .sev0 { background:var(--s0);} .sev1 { background:var(--s1);} .sev2 { background:var(--s2);} .sev3 { background:var(--s3);} .sev4 { background:var(--s4);}
+  .stack { display:flex; height:8px; border-radius:4px; overflow:hidden; gap:2px; background:rgba(255,255,255,.05); min-width:90px; }
+  .stack > span { display:block; height:100%; }
+  .sv { display:inline-flex; gap:.3rem; flex-wrap:wrap; }
+  .sv b { font-weight:700; font-size:.72rem; color:var(--tx); display:inline-flex; align-items:center; gap:.22rem; }
+  .sv b i { width:.5rem; height:.5rem; border-radius:2px; display:inline-block; }
+  .dots { display:inline-flex; gap:2px; } .dots i { width:6px; height:6px; border-radius:99px; background:rgba(255,255,255,.15); }
+  .dots i.on { background:var(--ac); }
+  .chip { display:inline-flex; gap:.25rem; align-items:center; font-size:.68rem; padding:.05rem .4rem; border-radius:6px; background:rgba(255,255,255,.06); color:#c9dbd7; white-space:nowrap; }
+  .chip.z { opacity:.35; }
+  /* legend */
+  .lg { display:flex; gap:.75rem; flex-wrap:wrap; font-size:.72rem; color:var(--mu); margin-top:.4rem; }
+  .lg span { display:inline-flex; gap:.3rem; align-items:center; } .lg i { width:.6rem; height:.6rem; border-radius:2px; display:inline-block; }
+  .bigline { display:flex; gap:1.2rem; align-items:center; flex-wrap:wrap; }
+  .big { font-size:2.2rem; font-weight:700; color:var(--hi); line-height:1; }
+  .big small { font-size:.9rem; color:var(--mu); font-weight:600; }
+  .hbar { height:6px; border-radius:3px; background:rgba(255,255,255,.07); overflow:hidden; } .hbar > span { display:block; height:100%; background:var(--ac2); border-radius:3px; }
+  .soc .row { display:flex; justify-content:space-between; align-items:center; gap:.6rem; padding:.34rem 0; border-bottom:1px solid var(--ln2); font-size:.8rem; }
+  .soc .row:last-child { border-bottom:0; }
+  .heat { display:grid; grid-template-columns:auto repeat(5,1fr); gap:3px; font-size:.65rem; color:var(--mu); }
+  .heat div { aspect-ratio:1.6; border-radius:5px; display:grid; place-items:center; font-weight:700; font-size:.8rem; color:#fff; }
+  .heat .h-0 { background:rgba(255,255,255,.05); } .heat .h-lo { background:#2f6f62; } .heat .h-md { background:#a8661c; } .heat .h-hi { background:#b3261e; }
+  .heat .ax { aspect-ratio:auto; background:none; color:var(--mu); font-weight:600; font-size:.62rem; }
+  .empty { padding:1.2rem .5rem; text-align:center; color:var(--mu); font-size:.83rem; }
+  .empty i { font-size:1.4rem; color:var(--mu2); display:block; margin-bottom:.4rem; }
+  .cv { position:relative; height:200px; } .cv.sm { height:170px; } .cv.tall { height:230px; }
+  .scroll { overflow-x:auto; }
+  .loading { padding:4rem 1rem; text-align:center; color:var(--mu); }
+  .sk { height:12px; border-radius:6px; background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.09),rgba(255,255,255,.04)); background-size:200% 100%; animation:sk 1.3s infinite; }
+  @keyframes sk { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  @media print { .soc { background:#fff; color:#111; } .noprint { display:none !important; } }
+</style>
+
+{% if restricted %}
+<div class="soc">
+  <div class="soc-h"><div><h1><span class="live"></span>{% trans "Security Operations" %}</h1>
+    <div class="s">{% trans "The organisation-wide dashboard needs global access." %}</div></div></div>
+  <div class="pn"><div class="empty"><i class="fa-solid fa-lock"></i>
+    {% trans "You can still review the products and findings you have access to." %}<br><br>
+    <a class="cbtn" href="{% url 'product' %}"><i class="fa-solid fa-layer-group"></i> {% trans "My products" %}</a>
+    <a class="cbtn" href="{% url 'open_findings' %}"><i class="fa-solid fa-bug"></i> {% trans "Open findings" %}</a></div></div>
+</div>
+{% elif not data %}
+<div class="soc" id="soc-pending">
+  <div class="soc-h"><div><h1><span class="live"></span>{% trans "Security Operations" %}</h1><div class="s">{% trans "Preparing metrics…" %}</div></div></div>
+  <div class="g g-k">{% for i in "12345678" %}<div class="k"><div class="sk" style="width:60%"></div><div class="sk mt" style="height:22px;width:40%"></div></div>{% endfor %}</div>
+  <div class="loading">{% trans "The first calculation runs in the background; this page reloads when it is ready." %}</div>
+</div>
+<script>(function poll(){ fetch("{% url 'dashboard_data' %}",{credentials:"same-origin"}).then(r=>{ if(r.status===200) location.reload(); else setTimeout(poll,2500); }).catch(()=>setTimeout(poll,5000)); })();</script>
+{% else %}
+{% with k=data.kpi x=data.exploit at=data.attacks sla=data.sla p=data.posture %}
+<div class="soc" id="soc">
+  <!-- ===== header ===== -->
+  <div class="soc-h">
+    <div>
+      <h1><span class="live" aria-hidden="true"></span>{% trans "Security Operations" %}</h1>
+      <div class="s">{% now "l j F Y" %} · {{ ORG_NAME }} · <span id="soc-age" data-generated="{{ data.generated }}">{% trans "updated just now" %}</span></div>
+    </div>
+    <div style="display:flex;gap:.45rem;flex-wrap:wrap" class="noprint">
+      <a class="cbtn" href="{% url 'orasec_command_center' %}"><i class="fa-solid fa-shield-halved"></i> {% trans "Command Center" %}</a>
+      <a class="cbtn" href="{% url 'orasec_vulnerabilities' %}"><i class="fa-solid fa-crosshairs"></i> {% trans "Vulnerabilities" %}</a>
+      <a class="cbtn" href="{% url 'orasec_attacks' %}"><i class="fa-solid fa-earth-oceania"></i> {% trans "Attack map" %}</a>
+      {% if can_refresh %}<button class="cbtn" type="button" id="soc-refresh"><i class="fa-solid fa-rotate"></i> {% trans "Refresh" %}</button>{% endif %}
+    </div>
+  </div>
+
+  <!-- ===== KPI strip ===== -->
+  <div class="g g-k">
+    <a class="k" href="{% url 'orasec_insights_view' 'executive' %}" style="display:flex;gap:.75rem;align-items:center">
+      <div class="ring" style="--p:{% widthratio p.score 1000 100 %}"><span>{{ p.score }}</span></div>
+      <div><div class="l">{% trans "Posture score" %}</div><div class="d" style="margin-top:.3rem">{% trans "Exposure" %} {{ p.vuln }} · ISO {{ p.compliance }} · {% trans "Hygiene" %} {{ p.hygiene }}</div></div>
+    </a>
+    <a class="k" href="{% url 'open_findings' %}">
+      <div class="l"><i class="fa-solid fa-bug"></i>{% trans "Open vulnerabilities" %}</div>
+      <div class="v">{{ k.open|intcomma }}</div>
+      <div class="d"><span style="color:#ff9a9d">{{ k.critical|intcomma }} {% trans "critical" %}</span> · <span style="color:#ffb27a">{{ k.high|intcomma }} {% trans "high" %}</span></div>
+    </a>
+    <a class="k{% if x.kev_cves %} alert{% endif %}" href="{% url 'orasec_vulnerabilities' %}?kev=1">
+      <div class="l"><i class="fa-solid fa-skull-crossbones"></i>{% trans "Known exploited" %}</div>
+      <div class="v">{{ x.kev_cves }}<small>CVEs</small></div>
+      <div class="d">{{ x.kev_findings }} {% trans "findings" %} · {% trans "of" %} {{ x.kev_catalog|intcomma }} {% trans "in CISA KEV" %}</div>
+    </a>
+    <a class="k" href="{% url 'orasec_insights_view' 'priority' %}">
+      <div class="l"><i class="fa-solid fa-chart-line"></i>{% trans "Likely exploited" %}</div>
+      <div class="v">{{ x.epss_likely_cves }}<small>CVEs</small></div>
+      <div class="d">{{ x.epss_likely }} {% trans "findings with EPSS ≥ 10%" %}</div>
+    </a>
+    <a class="k" href="{% url 'orasec_inventory' %}">
+      <div class="l"><i class="fa-solid fa-server"></i>{% trans "Assets exposed" %}</div>
+      <div class="v">{{ x.assets_affected }}<small>/ {{ x.assets_total }}</small></div>
+      <div class="d">{% trans "scanned assets with exploitable vulns" %}</div>
+    </a>
+    <a class="k" href="{% url 'orasec_attacks' %}">
+      <div class="l"><i class="fa-solid fa-shield"></i>{% trans "Attacks blocked · 24 h" %}</div>
+      <div class="v">{{ at.h24|intcomma }}</div>
+      <div class="d">{{ at.d7|intcomma }} {% trans "in 7 days" %} · {{ at.ips7|intcomma }} {% trans "source IPs" %}</div>
+    </a>
+    <a class="k" href="{% url 'closed_findings' %}">
+      <div class="l"><i class="fa-solid fa-circle-check"></i>{% trans "Resolved · 30 d" %}</div>
+      <div class="v">{{ k.resolved30|intcomma }}</div>
+      <div class="d">{% trans "MTTR" %} {% if sla.mttr is not None %}{{ sla.mttr }} {% trans "days" %}{% else %}—{% endif %} · {{ k.resolved_total|intcomma }} {% trans "all time" %}</div>
+    </a>
+    <a class="k{% if sla.overdue %} alert{% endif %}" href="{% url 'orasec_my_work' %}">
+      <div class="l"><i class="fa-solid fa-stopwatch"></i>{% trans "Within SLA" %}</div>
+      <div class="v">{% if sla.within_pct is not None %}{{ sla.within_pct }}<small>%</small>{% else %}—{% endif %}</div>
+      <div class="d">{{ sla.overdue|intcomma }} {% trans "overdue" %} · {{ sla.due7|intcomma }} {% trans "due in 7 days" %}</div>
+    </a>
+  </div>
+
+  <!-- ===== criticality + exploitability ===== -->
+  <div class="g g-2 mt">
+    <div class="pn">
+      <div class="pn-h"><h2><i class="fa-solid fa-chart-pie"></i>{% trans "Criticality" %}</h2><a class="more" href="{% url 'open_findings' %}">{% trans "All open findings" %} →</a></div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem;align-items:center">
+        <div><div class="cv sm"><canvas id="ch-sev" aria-label="{% trans 'Open findings by severity' %}" role="img"></canvas></div></div>
+        <div>
+          {% for s in data.severity %}
+          <div class="row"><span style="display:flex;gap:.45rem;align-items:center"><i class="sev{{ forloop.counter0 }}" style="width:.65rem;height:.65rem;border-radius:2px;display:inline-block"></i>{{ s.name }}</span>
+            <span class="hi">{{ s.n|intcomma }}</span></div>
+          {% endfor %}
+          <div class="mu" style="font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;font-weight:800;margin:.75rem 0 .3rem">{% trans "Priority (risk-based)" %}</div>
+          {% for b in data.bands %}
+          <div class="row"><span>{{ b.name }}</span><span class="hi">{{ b.n|intcomma }}</span></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="pn">
+      <div class="pn-h"><h2><i class="fa-solid fa-bolt"></i>{% trans "Exploitable — how exposed are we?" %}</h2><a class="more" href="{% url 'orasec_insights_view' 'priority' %}">{% trans "Priority view" %} →</a></div>
+      <div class="bigline">
+        <div><div class="big">{{ x.kev_cves }}<small> / {{ x.kev_catalog|intcomma }}</small></div><div class="mu" style="font-size:.75rem;margin-top:.25rem">{% trans "CISA known-exploited CVEs affect us" %}</div></div>
+        <div><div class="big">{{ x.epss_likely_cves }}<small> / {{ x.open_cves|intcomma }}</small></div><div class="mu" style="font-size:.75rem;margin-top:.25rem">{% trans "open CVEs likely exploited (EPSS ≥ 10%)" %}</div></div>
+        <div><div class="big">{{ x.assets_affected }}<small> {% trans "assets" %}</small></div><div class="mu" style="font-size:.75rem;margin-top:.25rem">{% trans "carry at least one of them" %}</div></div>
+      </div>
+      <div class="scroll mt">
+      <table class="dk">
+        <thead><tr><th>CVE</th><th>{% trans "Vulnerability" %}</th><th class="n">{% trans "Assets" %}</th><th class="n">EPSS</th><th>{% trans "CISA due" %}</th></tr></thead>
+        <tbody>
+        {% for r in x.kev %}
+          <tr><td class="mono"><a href="{% url 'orasec_vulnerabilities' %}?q={{ r.cve }}">{{ r.cve }}</a></td>
+            <td><span class="bd bd-kev">KEV</span>{% if r.ransomware %} <span class="bd bd-bad">{% trans "Ransomware" %}</span>{% endif %} <span class="mu">{{ r.name|default:r.component|truncatechars:58 }}</span></td>
+            <td class="n">{{ r.assets }}</td><td class="n mono">{% if r.epss is not None %}{% widthratio r.epss 1 100 %}%{% else %}—{% endif %}</td>
+            <td>{% if r.due %}<span class="bd {% if r.overdue %}bd-bad{% else %}bd-warn{% endif %}">{{ r.due }}</span>{% else %}—{% endif %}</td></tr>
+        {% endfor %}
+        {% for r in x.epss_top %}{% if not r.kev %}
+          <tr><td class="mono"><a href="{% url 'orasec_vulnerabilities' %}?q={{ r.cve }}">{{ r.cve }}</a></td>
+            <td><span class="bd bd-epss">EPSS</span> <span class="mu">{{ r.component|default:"—"|truncatechars:58 }}</span></td>
+            <td class="n">{{ r.assets }}</td><td class="n mono">{% widthratio r.epss 1 100 %}%</td><td class="mu2">—</td></tr>
+        {% endif %}{% endfor %}
+        {% if not x.kev and not x.epss_top %}<tr><td colspan="5"><div class="empty"><i class="fa-solid fa-circle-check"></i>{% trans "No known or likely exploited vulnerabilities open." %}</div></td></tr>{% endif %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== vulnerabilities per asset ===== -->
+  <div class="pn mt">
+    <div class="pn-h"><h2><i class="fa-solid fa-server"></i>{% trans "Vulnerabilities by asset" %} <span class="mu2" style="text-transform:none;letter-spacing:0;font-weight:600">· {% blocktrans with n=data.asset_count %}top by risk of {{ n }}{% endblocktrans %}</span></h2>
+      <a class="more" href="{% url 'orasec_inventory' %}">{% trans "Asset inventory" %} →</a></div>
+    <div class="scroll">
+    <table class="dk">
+      <thead><tr><th>{% trans "Asset" %}</th><th>{% trans "Type" %}</th><th>{% trans "Criticality" %}</th><th style="min-width:180px">{% trans "Severity mix" %}</th>
+        <th class="n">{% trans "Critical" %}</th><th class="n">{% trans "High" %}</th><th class="n">{% trans "Open" %}</th><th>{% trans "Exploitable" %}</th><th class="n">{% trans "Overdue" %}</th></tr></thead>
+      <tbody>
+      {% for a in data.assets %}
+        <tr>
+          <td><a class="hi" href="{{ a.url }}">{{ a.name|truncatechars:42 }}</a>{% if a.where %} <span class="mu2">· {{ a.where }}</span>{% endif %}
+            {% if a.exposed %} <span class="bd bd-exp" title="{% trans 'Internet exposed' %}"><i class="fa-solid fa-globe"></i></span>{% endif %}
+            <div class="mu2" style="font-size:.7rem">{{ a.product|default:"" }}</div></td>
+          <td><span class="chip">{{ a.kind }}</span></td>
+          <td><span class="dots" title="{% blocktrans with c=a.criticality %}Criticality {{ c }} of 5{% endblocktrans %}">{% for i in "12345" %}<i class="{% if forloop.counter <= a.criticality %}on{% endif %}"></i>{% endfor %}</span></td>
+          <td><div class="stack" title="{{ a.mix }}">
+            {% if a.sev.0 %}<span class="sev0" style="width:{% widthratio a.sev.0 a.total 100 %}%"></span>{% endif %}{% if a.sev.1 %}<span class="sev1" style="width:{% widthratio a.sev.1 a.total 100 %}%"></span>{% endif %}{% if a.sev.2 %}<span class="sev2" style="width:{% widthratio a.sev.2 a.total 100 %}%"></span>{% endif %}{% if a.sev.3 %}<span class="sev3" style="width:{% widthratio a.sev.3 a.total 100 %}%"></span>{% endif %}{% if a.sev.4 %}<span class="sev4" style="width:{% widthratio a.sev.4 a.total 100 %}%"></span>{% endif %}
+          </div></td>
+          <td class="n" style="{% if a.sev.0 %}color:#ff9a9d;font-weight:700{% endif %}">{{ a.sev.0|intcomma }}</td>
+          <td class="n" style="{% if a.sev.1 %}color:#ffb27a;font-weight:700{% endif %}">{{ a.sev.1|intcomma }}</td>
+          <td class="n hi">{{ a.total|intcomma }}</td>
+          <td>{% if a.kev %}<span class="bd bd-kev">{{ a.kev }} KEV</span> {% endif %}{% if a.epss %}<span class="bd bd-epss">{{ a.epss }} EPSS</span>{% endif %}{% if not a.kev and not a.epss %}<span class="mu2">—</span>{% endif %}</td>
+          <td class="n">{% if a.overdue %}<span class="bd bd-bad">{{ a.overdue }}</span>{% else %}<span class="mu2">0</span>{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="9"><div class="empty"><i class="fa-solid fa-circle-check"></i>{% trans "No open vulnerabilities on any asset." %}</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <div class="lg">{% for s in data.severity %}<span><i class="sev{{ forloop.counter0 }}"></i>{{ s.name }}</span>{% endfor %}<span><span class="bd bd-kev">KEV</span> {% trans "CISA known exploited" %}</span><span><span class="bd bd-epss">EPSS</span> {% trans "≥ 10% exploit probability" %}</span></div>
+  </div>
+
+  <!-- ===== attacks + trend ===== -->
+  <div class="g g-21 mt">
+    <div class="pn">
+      <div class="pn-h"><h2><i class="fa-solid fa-shield"></i>{% trans "Attacks blocked · last 30 days" %}</h2><a class="more" href="{% url 'orasec_attacks' %}">{% trans "Attack map" %} →</a></div>
+      <div class="bigline" style="margin-bottom:.5rem">
+        <div><div class="big">{{ at.d30|intcomma }}</div><div class="mu" style="font-size:.75rem;margin-top:.2rem">{% trans "blocked at the edge and firewalls" %}{% if at.prev30 %} · {% trans "previous 30 days" %} {{ at.prev30|intcomma }}{% endif %}</div></div>
+      </div>
+      <div class="cv"><canvas id="ch-att" role="img" aria-label="{% trans 'Blocked attacks per day' %}"></canvas></div>
+      <div class="g mt" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+        <div><div class="mu" style="font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;font-weight:800;margin-bottom:.2rem">{% trans "Top origins" %}</div>
+          {% for c in at.countries %}<div class="row"><span>{{ c.flag }} {{ c.cc }}</span><span class="hi">{{ c.n|intcomma }}</span></div>{% empty %}<div class="mu2">—</div>{% endfor %}</div>
+        <div><div class="mu" style="font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;font-weight:800;margin-bottom:.2rem">{% trans "Blocked by" %}</div>
+          {% for s in at.by_source %}<div class="row"><span style="text-transform:capitalize">{{ s.source }}</span><span class="hi">{{ s.n|intcomma }}</span></div>{% empty %}<div class="mu2">—</div>{% endfor %}</div>
+        <div><div class="mu" style="font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;font-weight:800;margin-bottom:.2rem">{% trans "Targeted ports" %}</div>
+          {% for s in at.ports %}<div class="row"><span class="mono">{{ s.port }}</span><span class="hi">{{ s.n|intcomma }}</span></div>{% empty %}<div class="mu2">—</div>{% endfor %}</div>
+      </div>
+    </div>
+    <div class="pn">
+      <div class="pn-h"><h2><i class="fa-solid fa-arrow-trend-up"></i>{% trans "Detected vs resolved · weekly" %}</h2><a class="more" href="{% url 'orasec_insights_view' 'program' %}">{% trans "Programme" %} →</a></div>
+      <div class="cv tall"><canvas id="ch-trend" role="img" aria-label="{% trans 'Findings detected and resolved per week' %}"></canvas></div>
+      <div class="lg"><span><i style="background:#f5873a"></i>{% trans "Detected" %}</span><span><i style="background:#2fd0b8"></i>{% trans "Resolved" %}</span></div>
+      {% if p.trend|length > 1 %}<div class="mu" style="font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;font-weight:800;margin:.8rem 0 .2rem">{% trans "Posture score" %}</div>
+      <div class="cv" style="height:90px"><canvas id="ch-posture" role="img" aria-label="{% trans 'Posture score trend' %}"></canvas></div>{% endif %}
+    </div>
+  </div>
+
+  <!-- ===== code vulnerabilities per product ===== -->
+  <div class="pn mt">
+    <div class="pn-h"><h2><i class="fa-solid fa-code"></i>{% trans "Code vulnerabilities by product" %}</h2><a class="more" href="{% url 'orasec_code' %}">{% trans "Code & Repositories" %} →</a></div>
+    <div class="scroll">
+    <table class="dk">
+      <thead><tr><th>{% trans "Product" %}</th>{% for c in data.code_cats %}<th class="n">{{ c }}</th>{% endfor %}<th style="min-width:160px">{% trans "Severity mix" %}</th>
+        <th class="n">{% trans "Open" %}</th><th class="n">{% trans "Resolved" %}</th><th class="n">{% trans "Resolved 30 d" %}</th><th style="min-width:120px">{% trans "Fixed" %}</th></tr></thead>
+      <tbody>
+      {% for r in data.code %}
+        <tr><td class="hi">{{ r.product }}</td>
+          {% for n in r.cats %}<td class="n">{% if n %}{{ n|intcomma }}{% else %}<span class="mu2">0</span>{% endif %}</td>{% endfor %}
+          <td><div class="stack">{% for n in r.sev %}{% if n %}<span class="sev{{ forloop.counter0 }}" style="width:{% widthratio n r.open 100 %}%"></span>{% endif %}{% endfor %}</div>
+            <div class="sv" style="margin-top:.25rem">{% for n in r.sev %}{% if n %}<b><i class="sev{{ forloop.counter0 }}"></i>{{ n }}</b>{% endif %}{% endfor %}</div></td>
+          <td class="n hi">{{ r.open|intcomma }}</td><td class="n" style="color:#7ee2b0">{{ r.resolved|intcomma }}</td><td class="n">{{ r.resolved30|intcomma }}</td>
+          <td>{% if r.fixed_pct is not None %}<div style="display:flex;gap:.45rem;align-items:center"><div class="hbar" style="flex:1"><span style="width:{{ r.fixed_pct }}%"></span></div><span class="mu" style="font-size:.72rem;min-width:2.2rem;text-align:right">{{ r.fixed_pct }}%</span></div>{% else %}—{% endif %}</td></tr>
+      {% empty %}
+        <tr><td colspan="11"><div class="empty"><i class="fa-solid fa-code"></i>{% trans "No code scans yet. Connect GitHub under Automation → Connectors." %}</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <div class="lg"><span>SAST = Semgrep</span><span>{% trans "Secrets" %} = Gitleaks</span><span>{% trans "Dependencies" %} = Trivy deps &amp; IaC</span><span>{% trans "Containers" %} = Trivy images</span><span>GitHub = Dependabot · {% trans "code & secret scanning" %}</span></div>
+  </div>
+
+  <!-- ===== resolution time ===== -->
+  <div class="g g-2 mt">
+    <div class="pn">
+      <div class="pn-h"><h2><i class="fa-solid fa-stopwatch"></i>{% trans "Resolution time after detection" %} <span class="mu2" style="text-transform:none;letter-spacing:0;font-weight:600">· {% trans "last 12 months" %}</span></h2><a class="more" href="{% url 'orasec_priority_settings' %}">{% trans "SLA settings" %} →</a></div>
+      <div class="scroll">
+      <table class="dk">
+        <thead><tr><th>{% trans "Severity" %}</th><th class="n">{% trans "SLA" %}</th><th class="n">{% trans "Resolved" %}</th><th class="n">{% trans "Median" %}</th><th class="n">{% trans "Mean" %}</th><th class="n">P90</th><th>{% trans "Within SLA" %}</th></tr></thead>
+        <tbody>
+        {% for r in data.resolution %}
+          <tr><td><span style="display:inline-flex;gap:.4rem;align-items:center"><i class="sev{{ forloop.counter0 }}" style="width:.6rem;height:.6rem;border-radius:2px;display:inline-block"></i>{{ r.severity }}</span></td>
+            <td class="n mu">{{ r.sla }} d</td><td class="n">{{ r.closed|intcomma }}</td>
+            <td class="n hi">{% if r.median is not None %}{{ r.median }} d{% else %}—{% endif %}</td>
+            <td class="n">{% if r.mean is not None %}{{ r.mean }} d{% else %}—{% endif %}</td>
+            <td class="n">{% if r.p90 is not None %}{{ r.p90 }} d{% else %}—{% endif %}</td>
+            <td>{% if r.within_pct is not None %}<span class="bd {% if r.within_pct >= 90 %}bd-ok{% elif r.within_pct >= 70 %}bd-warn{% else %}bd-bad{% endif %}">{{ r.within_pct }}%</span>{% else %}<span class="mu2">{% trans "no fixes yet" %}</span>{% endif %}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      <div class="mu" style="font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;font-weight:800;margin:.85rem 0 .2rem">{% trans "Time to resolve" %}</div>
+      <div class="cv sm"><canvas id="ch-res" role="img" aria-label="{% trans 'Resolved findings by time to fix' %}"></canvas></div>
+    </div>
+    <div class="pn">
+      <div class="pn-h"><h2><i class="fa-solid fa-hourglass-half"></i>{% trans "Open vulnerability age" %}</h2><a class="more" href="{% url 'orasec_remediation' %}">{% trans "Remediation Center" %} →</a></div>
+      <div class="cv tall"><canvas id="ch-age" role="img" aria-label="{% trans 'Open findings by age and severity' %}"></canvas></div>
+      <div class="lg">{% for s in data.severity %}<span><i class="sev{{ forloop.counter0 }}"></i>{{ s.name }}</span>{% endfor %}</div>
+      {% if data.fix_first %}
+      <div class="mu" style="font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;font-weight:800;margin:.85rem 0 .2rem">{% trans "Fix first — one update clears many" %}</div>
+      {% for f in data.fix_first %}
+        <div class="row"><span><span class="hi">{{ f.component|truncatechars:34 }}</span>{% if f.kev %} <span class="bd bd-kev">KEV</span>{% endif %} <span class="mu2" style="font-size:.72rem">{{ f.hosts }} {% trans "host(s)" %}</span></span>
+          <span class="mu">{{ f.findings|intcomma }} {% trans "findings" %}</span></div>
+      {% endfor %}{% endif %}
+    </div>
+  </div>
+
+  <!-- ===== risk register + governance ===== -->
+  <div class="g g-21 mt">
+    <div class="pn">
+      <div class="pn-h"><h2><i class="fa-solid fa-scale-balanced"></i>{% trans "Risk register" %} <span class="mu2" style="text-transform:none;letter-spacing:0;font-weight:600">· {{ data.risk.open }} {% trans "open" %} · {{ data.risk.high }} {% trans "high" %}{% if data.risk.review_overdue %} · {{ data.risk.review_overdue }} {% trans "review overdue" %}{% endif %}</span></h2>
+        <a class="more" href="{% url 'orasec_risks' %}">{% trans "Open register" %} →</a></div>
+      {% if data.risk.rows %}
+      <div style="display:grid;grid-template-columns:minmax(170px,220px) minmax(0,1fr);gap:1rem;align-items:start">
+        <div>
+          <div class="heat" aria-label="{% trans 'Open risks by likelihood and impact' %}">
+            {% for row in data.risk.heat %}
+              <span class="ax">{{ row.likelihood }}</span>
+              {% for c in row.cells %}<div class="h-{% if c.n %}{{ c.lvl }}{% else %}0{% endif %}">{% if c.n %}{{ c.n }}{% endif %}</div>{% endfor %}
+            {% endfor %}
+            <span class="ax"></span>{% for i in "12345" %}<span class="ax" style="text-align:center">{{ i }}</span>{% endfor %}
+          </div>
+          <div class="mu2" style="font-size:.66rem;margin-top:.3rem;text-align:center">{% trans "Impact →  ·  ↑ Likelihood" %}</div>
+        </div>
+        <div class="scroll">
+          <table class="dk"><thead><tr><th>{% trans "Ref" %}</th><th>{% trans "Risk" %}</th><th class="n">{% trans "Score" %}</th><th>{% trans "Treatment" %}</th><th>{% trans "Owner" %}</th><th>{% trans "Status" %}</th></tr></thead>
+          <tbody>{% for r in data.risk.rows %}
+            <tr><td class="mono mu">{{ r.ref }}</td><td><a class="hi" href="{% url 'orasec_risk' r.id %}">{{ r.title|truncatechars:52 }}</a>{% if r.review_overdue %} <span class="bd bd-bad">{% trans "review due" %}</span>{% endif %}</td>
+              <td class="n"><span class="bd {% if r.score >= 15 %}bd-bad{% elif r.score >= 8 %}bd-warn{% else %}bd-ok{% endif %}">{{ r.score }}</span>{% if r.residual %} <span class="mu2">→ {{ r.residual }}</span>{% endif %}</td>
+              <td>{{ r.treatment }}</td><td class="mu">{{ r.owner|default:"—" }}</td><td><span class="bd bd-mut">{{ r.status_label }}</span></td></tr>
+          {% endfor %}</tbody></table>
+        </div>
+      </div>
+      {% else %}
+        <div class="empty"><i class="fa-solid fa-scale-balanced"></i>{% trans "No risks recorded yet. Record the top risks (e.g. the KEV items above) so treatment and owners are tracked for ISO 27001 clause 6.1." %}<br><br>
+          <a class="cbtn" href="{% url 'orasec_risk_new' %}"><i class="fa-solid fa-plus"></i> {% trans "Add a risk" %}</a></div>
+      {% endif %}
+    </div>
+    <div class="pn">
+      <div class="pn-h"><h2><i class="fa-solid fa-clipboard-check"></i>{% trans "ISO 27001 & data sources" %}</h2><a class="more" href="{% url 'orasec_compliance' %}">{% trans "Compliance" %} →</a></div>
+      {% with c=data.compliance %}
+      <div class="bigline"><div class="ring" style="--p:{% widthratio c.implemented c.applicable 100 %}"><span>{% widthratio c.implemented c.applicable 100 %}%</span></div>
+        <div style="font-size:.8rem"><div class="hi">{{ c.implemented }} / {{ c.applicable }} {% trans "controls implemented" %}</div>
+          <div class="mu" style="margin-top:.2rem"><span style="color:#7ee2b0">{{ c.pass }} {% trans "pass" %}</span> · <span style="color:#f3d36b">{{ c.warn }} {% trans "warn" %}</span> · <span style="color:#ffb4ac">{{ c.fail }} {% trans "fail" %}</span> · {{ c.evidence }} {% trans "evidence items" %}</div></div></div>
+      {% endwith %}
+      <div class="mu" style="font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;font-weight:800;margin:.85rem 0 .2rem">{% trans "Connectors" %}</div>
+      {% for c in data.connectors %}
+        <div class="row"><span>{{ c.name }}</span><span class="bd {% if c.healthy %}bd-ok{% elif c.status == 'error' or c.status == 'fail' %}bd-bad{% else %}bd-warn{% endif %}">{% if c.healthy %}{% trans "Healthy" %}{% else %}{{ c.status|capfirst }}{% endif %}</span></div>
+      {% empty %}<div class="mu2">—</div>{% endfor %}
+      {% for f in data.feeds %}
+        <div class="row"><span>{{ f.name }} {% trans "feed" %} <span class="mu2">· {{ f.records|intcomma }}</span></span><span class="bd {% if f.status == 'ok' %}bd-ok{% else %}bd-warn{% endif %}">{{ f.status|capfirst }}</span></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endwith %}
+
+{{ data.attacks.daily|json_script:"d-att" }}
+{{ data.trend|json_script:"d-trend" }}
+{{ data.severity|json_script:"d-sev" }}
+{{ data.resolution|json_script:"d-res" }}
+{{ data.posture.trend|json_script:"d-post" }}
+{% endif %}
+{% endblock %}
+
+{% block postscript %}
+{{ block.super }}
+{% if data and not restricted %}
+<script src="{% static "chart.js/dist/chart.umd.js" %}"></script>
+<script>
+(function () {
+  "use strict";
+  const J = id => { const el = document.getElementById(id); return el ? JSON.parse(el.textContent) : null; };
+  const SEV = ["#f2555a", "#f5873a", "#e8c440", "#5b9cf0", "#8796a8"];
+  const INK = "#8aa49f", GRID = "rgba(255,255,255,.06)", SURF = "#131b1a";
+  const nf = new Intl.NumberFormat();
+
+  // "updated x min ago"
+  const age = document.getElementById("soc-age");
+  function tick() {
+    const s = Math.max(0, (Date.now() - new Date(age.dataset.generated).getTime()) / 1000);
+    age.textContent = s < 60 ? "{% trans 'updated just now' %}" : s < 3600 ? `{% trans 'updated' %} ${Math.round(s / 60)} {% trans 'min ago' %}` : `{% trans 'updated' %} ${Math.round(s / 3600)} {% trans 'h ago' %}`;
+  }
+  if (age) { tick(); setInterval(tick, 30000); }
+  const rb = document.getElementById("soc-refresh");
+  if (rb) rb.addEventListener("click", () => {
+    rb.disabled = true; rb.querySelector("i").classList.add("fa-spin");
+    fetch("{% url 'dashboard_data' %}?refresh=1", { credentials: "same-origin" }).then(() => location.reload()).catch(() => location.reload());
+  });
+  // keep a wall-mounted screen current: reload every 5 minutes while visible
+  setInterval(() => { if (document.visibilityState === "visible") location.reload(); }, 5 * 60 * 1000);
+
+  if (!window.Chart) return;
+  Chart.defaults.color = INK;
+  Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+  Chart.defaults.font.size = 11;
+  Chart.defaults.animation = false;
+  Chart.defaults.plugins.legend.display = false;
+  Object.assign(Chart.defaults.plugins.tooltip, { backgroundColor: "#0b1110", borderColor: "rgba(255,255,255,.15)", borderWidth: 1, padding: 9,
+    titleColor: "#fff", bodyColor: "#dfece9", cornerRadius: 8, displayColors: true, boxPadding: 4 });
+  const axis = (extra) => Object.assign({ grid: { color: GRID, drawTicks: false }, border: { display: false }, ticks: { padding: 6 } }, extra || {});
+  const fmtDay = iso => new Date(iso + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" });
+
+  // criticality donut
+  const sev = J("d-sev");
+  new Chart(document.getElementById("ch-sev"), {
+    type: "doughnut",
+    data: { labels: sev.map(s => s.name), datasets: [{ data: sev.map(s => s.n), backgroundColor: SEV, borderColor: SURF, borderWidth: 2, hoverOffset: 4 }] },
+    options: { cutout: "68%", maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: c => ` ${c.label}: ${nf.format(c.parsed)}` } } } },
+    plugins: [{ id: "center", afterDraw(ch) {
+      const { ctx, chartArea: a } = ch; const total = sev.reduce((t, s) => t + s.n, 0);
+      ctx.save(); ctx.textAlign = "center"; ctx.fillStyle = "#fff"; ctx.font = "700 20px " + Chart.defaults.font.family;
+      ctx.fillText(nf.format(total), (a.left + a.right) / 2, (a.top + a.bottom) / 2 + 2);
+      ctx.fillStyle = INK; ctx.font = "600 10px " + Chart.defaults.font.family; ctx.fillText("OPEN", (a.left + a.right) / 2, (a.top + a.bottom) / 2 + 17); ctx.restore();
+    } }],
+  });
+
+  // attacks per day
+  const att = J("d-att");
+  new Chart(document.getElementById("ch-att"), {
+    type: "bar",
+    data: { labels: att.map(d => fmtDay(d.d)), datasets: [{ label: "{% trans 'Blocked' %}", data: att.map(d => d.n), backgroundColor: "#2fd0b8", hoverBackgroundColor: "#7ff0de",
+      borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: "bottom", maxBarThickness: 18 }] },
+    options: { maintainAspectRatio: false, scales: { x: axis({ grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 14 } }), y: axis({ beginAtZero: true, ticks: { callback: v => nf.format(v), maxTicksLimit: 5 } }) },
+      plugins: { tooltip: { callbacks: { label: c => ` ${nf.format(c.parsed.y)} {% trans 'blocked' %}` } } } },
+  });
+
+  // detected vs resolved per week (same unit, one axis)
+  const tr = J("d-trend");
+  new Chart(document.getElementById("ch-trend"), {
+    type: "line",
+    data: { labels: tr.map(w => fmtDay(w.w)), datasets: [
+      { label: "{% trans 'Detected' %}", data: tr.map(w => w.opened), borderColor: "#f5873a", backgroundColor: "#f5873a", borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, tension: .25 },
+      { label: "{% trans 'Resolved' %}", data: tr.map(w => w.closed), borderColor: "#2fd0b8", backgroundColor: "#2fd0b8", borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, tension: .25 }] },
+    options: { maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+      scales: { x: axis({ grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 12 } }), y: axis({ beginAtZero: true, ticks: { callback: v => nf.format(v), maxTicksLimit: 5 } }) } },
+  });
+
+  // posture trend
+  const post = J("d-post");
+  const pc = document.getElementById("ch-posture");
+  if (pc && post && post.length > 1) new Chart(pc, {
+    type: "line",
+    data: { labels: post.map(p => fmtDay(p.d)), datasets: [{ label: "{% trans 'Posture' %}", data: post.map(p => p.score), borderColor: "#2fd0b8", borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, fill: true,
+      backgroundColor: "rgba(47,208,184,.12)", tension: .3 }] },
+    options: { maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, scales: { x: { display: false }, y: axis({ suggestedMin: 0, suggestedMax: 1000, ticks: { maxTicksLimit: 3 } }) } },
+  });
+
+  // time to resolve (resolved findings, by bucket) and open age (open findings, by bucket): stacked by severity
+  const res = J("d-res");
+  const stacked = (el, key, labels, unit) => new Chart(document.getElementById(el), {
+    type: "bar",
+    data: { labels, datasets: res.map((r, i) => ({ label: r.severity, data: r[key], backgroundColor: SEV[i], borderColor: SURF, borderWidth: { top: 2 }, borderSkipped: "bottom", maxBarThickness: 46 })) },
+    options: { maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+      scales: { x: axis({ stacked: true, grid: { display: false } }), y: axis({ stacked: true, beginAtZero: true, ticks: { callback: v => nf.format(v), maxTicksLimit: 5 } }) },
+      plugins: { tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${nf.format(c.parsed.y)} ${unit}`, footer: items => `{% trans 'Total' %}: ${nf.format(items.reduce((t, i) => t + i.parsed.y, 0))}` } } } },
+  });
+  stacked("ch-res", "buckets", ["≤ 7 d", "8–30 d", "31–90 d", "> 90 d"], "{% trans 'resolved' %}");
+  stacked("ch-age", "open_age", ["≤ 7 d", "8–30 d", "31–90 d", "> 90 d"], "{% trans 'open' %}");
+})();
+</script>
+{% endif %}
+{% endblock %}
+

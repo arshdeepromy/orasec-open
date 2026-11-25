@@ -1,0 +1,79 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}GRC Dashboard | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}
+<div class="hdr"><div><h1>{% trans "GRC Dashboard" %}</h1><div class="sub">{% trans "Risks, exceptions, suppliers and opportunities in one place. Bands from POL-002: Critical 20–25, High 12–19, Medium 6–11, Low 1–5." %}</div></div>
+<div style="display:flex;gap:.4rem;flex-wrap:wrap" class="noprint"><button class="btn" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+<a class="btn" href="{% url 'orasec_risks' %}">{% trans "Risk register" %}</a><a class="btn" href="{% url 'orasec_risk_assessments' %}">{% trans "Risk assessments" %}</a>
+<a class="btn" href="{% url 'orasec_suppliers' %}">{% trans "Suppliers" %}</a><a class="btn" href="{% url 'orasec_exceptions' %}">{% trans "Exceptions" %}</a>
+<a class="btn" href="{% url 'orasec_changes' %}">{% trans "Changes" %}</a><a class="btn" href="{% url 'orasec_opportunities' %}">{% trans "Opportunities" %}</a></div></div>
+
+{% if mine.exceptions or mine.supplier_assessments or mine.risk_assessments or mine.my_risks_due or mine.my_actions or mine.changes %}
+<div class="card" style="border-color:#d8a800;margin-bottom:1rem"><h2><i class="fa-solid fa-inbox"></i> {% trans "Waiting for you" %}</h2>
+<table class="t"><tbody>
+{% for c, what in mine.changes %}<tr><td><span class="b b-requested">{% if what == "approve" %}{% trans "Approve" %}{% else %}{% trans "Review" %}{% endif %}</span></td><td class="mono">{{ c.ref }}</td><td><a class="lk" href="{% url 'orasec_change' c.id %}">{{ c.title }}</a></td><td>{% trans "Change" %} · {{ c.get_category_display|truncatechars:28 }}</td></tr>{% endfor %}
+{% for e in mine.exceptions %}<tr><td><span class="b b-requested">{% trans "Decide" %}</span></td><td class="mono">{{ e.ref }}</td><td><a class="lk" href="{% url 'orasec_exception' e.id %}">{{ e.title }}</a></td><td>{{ e.get_kind_display }} · {{ e.band }}</td></tr>{% endfor %}
+{% for a in mine.supplier_assessments %}<tr><td><span class="b b-requested">{% trans "Decide" %}</span></td><td class="mono">{{ a.ref }}</td><td><a class="lk" href="{% url 'orasec_supplier_assessment' a.id %}">{{ a.supplier.name }}</a></td><td>{{ a.get_kind_display }}</td></tr>{% endfor %}
+{% for a in mine.risk_assessments %}<tr><td><span class="b b-requested">{% trans "Decide" %}</span></td><td class="mono">{{ a.ref }}</td><td><a class="lk" href="{% url 'orasec_risk_assessment' a.id %}">{{ a.title }}</a></td><td>{% trans "Risk assessment" %}</td></tr>{% endfor %}
+{% for a in mine.my_actions %}<tr><td><span class="b b-due">{% trans "Action" %}</span></td><td class="mono">{{ a.objective.ref }}</td><td><a class="lk" href="{% url 'orasec_objective' a.objective.id %}">{{ a.title }}</a></td><td>{% trans "due" %} {{ a.due_date|date:"j M Y" }}</td></tr>{% endfor %}
+{% for r in mine.my_risks_due %}<tr><td><span class="b b-due">{% trans "Review" %}</span></td><td class="mono">{{ r.ref }}</td><td><a class="lk" href="{% url 'orasec_risk' r.id %}">{{ r.title }}</a></td><td>{% trans "due" %} {{ r.review_date|date:"j M Y" }}</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+
+<div class="grid g4" style="margin-bottom:1rem">
+  <div class="card kpi"><div class="l">{% trans "Open risks" %}</div><div class="v">{{ n_risks }}</div>
+    <div class="d"><span class="b b-Critical">{{ by_band.Critical }} Critical</span> <span class="b b-High">{{ by_band.High }} High</span> <span class="b b-Medium">{{ by_band.Medium }} Med</span> <span class="b b-Low">{{ by_band.Low }} Low</span></div></div>
+  <div class="card kpi"><div class="l">{% trans "Risk reviews" %}</div><div class="v">{{ review_overdue|length }}</div><div class="d">{% trans "overdue" %} · {{ review_soon|length }} {% trans "due in 30 days" %}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Exceptions" %}</div><div class="v">{{ exc_pending.count }}</div><div class="d">{% trans "awaiting approval" %} · {{ exc_expiring.count }} {% trans "expiring in 30 days" %} · {{ exc_expired.count }} {% trans "expired" %}</div></div>
+  <div class="card kpi"><div class="l"><a class="lk" href="{% url 'orasec_changes' %}">{% trans "Changes" %}</a></div><div class="v">{{ chg.awaiting_approval }}</div><div class="d">{% trans "awaiting approval" %} · {{ chg.awaiting_review }} {% trans "awaiting review" %} · {{ chg.overdue }} {% trans "overdue" %}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Suppliers" %}</div><div class="v">{{ sup_total }}</div><div class="d">{{ sup_unassessed|length }} {% trans "without approved assessment" %} · {{ sup_overdue|length }} {% trans "review overdue" %} · {{ sa_pending.count }} {% trans "awaiting approval" %}</div></div>
+</div>
+
+<div class="card" style="margin-bottom:1rem"><h2>{% trans "Security objectives" %} <a class="lk" style="font-size:.8rem;font-weight:500" href="{% url 'orasec_objectives' %}">{% trans "All →" %}</a></h2>
+<table class="t"><tbody>{% for o in objectives %}<tr><td class="mono">{{ o.ref }}</td><td><a class="lk" href="{% url 'orasec_objective' o.id %}">{{ o.title }}</a></td>
+<td><span class="b b-{{ o.status }}">{{ o.get_status_display }}</span></td><td class="muted" style="font-size:.8rem">{{ o.current_value }}</td><td>{{ o.owner.get_full_name|default:"—" }}</td><td>{{ o.due_date|date:"j M Y"|default:"—" }}</td></tr>
+{% empty %}<tr><td class="empty">{% trans "No objectives recorded." %}</td></tr>{% endfor %}</tbody></table></div>
+
+<div class="grid" style="grid-template-columns:minmax(260px,330px) 1fr;margin-bottom:1rem">
+  <div class="card"><h2>{% trans "Heat map (inherent, open risks)" %}</h2>
+    <table class="hm" style="border-collapse:separate;border-spacing:3px;width:100%">
+    {% for row in grid %}<tr><td class="muted" style="font-size:.7rem;width:18px;height:auto">{{ row.0.0 }}</td>
+      {% for l, i, n, band in row %}<td class="hm-{{ band }}">{% if n %}{{ n }}{% endif %}</td>{% endfor %}</tr>{% endfor %}
+    <tr><td></td>{% for i in "12345" %}<td class="muted" style="font-size:.7rem;height:auto">{{ i }}</td>{% endfor %}</tr></table>
+    <div class="muted" style="font-size:.75rem;margin-top:.3rem">{% trans "Rows: likelihood 5→1. Columns: impact 1→5." %}</div>
+    <div style="margin-top:.6rem;font-size:.82rem">{% trans "Target after treatment" %}: <span class="b b-Critical">{{ by_res.Critical }}</span> <span class="b b-High">{{ by_res.High }}</span> <span class="b b-Medium">{{ by_res.Medium }}</span> <span class="b b-Low">{{ by_res.Low }}</span></div>
+  </div>
+  <div class="card"><h2>{% trans "Top risks" %} <a class="lk" style="font-size:.8rem;font-weight:500" href="{% url 'orasec_risks' %}">{% trans "Register →" %}</a></h2>
+  <table class="t"><thead><tr><th>Ref</th><th>{% trans "Risk" %}</th><th class="num">{% trans "Score" %}</th><th>{% trans "Owner" %}</th><th>{% trans "Status" %}</th><th>{% trans "Review" %}</th></tr></thead><tbody>
+  {% for r in top %}<tr><td class="mono">{{ r.ref }}</td><td><a class="lk" href="{% url 'orasec_risk' r.id %}">{{ r.title }}</a></td>
+  <td class="num"><span class="b b-{{ r.inherent_band }}">{{ r.inherent_score }}</span>{% if r.residual_score %} → <span class="b b-{{ r.residual_band }}">{{ r.residual_score }}</span>{% endif %}</td>
+  <td>{{ r.owner.get_full_name|default:"—" }}</td><td><span class="b b-{{ r.status }}">{{ r.get_status_display }}</span></td><td>{{ r.review_date|date:"j M Y"|default:"—" }}</td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">{% trans "No open risks." %}</td></tr>{% endfor %}</tbody></table></div>
+</div>
+
+<div class="grid g2" style="margin-bottom:1rem">
+  <div class="card"><h2>{% trans "Risk assessment" %}</h2>
+  {% if ra_latest %}<dl class="kv"><dt>{% trans "Latest approved" %}</dt><dd><a class="lk" href="{% url 'orasec_risk_assessment' ra_latest.id %}">{{ ra_latest.ref }} {{ ra_latest.title }}</a></dd>
+  <dt>{% trans "Assessed" %}</dt><dd>{{ ra_latest.assessed_on|date:"j M Y" }}</dd><dt>{% trans "Next due" %}</dt><dd>{{ ra_latest.next_assessment|date:"j M Y" }}</dd></dl>
+  {% else %}<div class="empty">{% trans "No approved risk assessment yet." %}</div>{% endif %}
+  {% for a in ra_pending %}<div style="margin-top:.4rem"><span class="b b-submitted">{{ a.ref }} {% trans "awaiting approval" %}</span></div>{% endfor %}
+  </div>
+  <div class="card"><h2>{% trans "Opportunities" %} <a class="lk" style="font-size:.8rem;font-weight:500" href="{% url 'orasec_opportunities' %}">{% trans "All →" %}</a></h2>
+  <table class="t"><tbody>{% for o in opps %}<tr><td class="mono">{{ o.ref }}</td><td>{{ o.title }}</td><td>{{ o.owner.get_full_name|default:"—" }}</td><td><span class="b b-{{ o.status }}">{{ o.get_status_display }}</span></td></tr>
+  {% empty %}<tr><td class="empty">{% trans "None recorded." %}</td></tr>{% endfor %}</tbody></table></div>
+</div>
+
+<div class="grid g2">
+  <div class="card"><h2>{% trans "Suppliers needing attention" %}</h2>
+  <div class="muted" style="font-size:.8rem;margin-bottom:.4rem">{% trans "By tier" %}: Critical {{ sup_tier.critical|default:0 }} · High {{ sup_tier.high|default:0 }} · Standard {{ sup_tier.standard|default:0 }}</div>
+  <table class="t"><tbody>
+  {% for s in sup_unassessed %}<tr><td class="mono">{{ s.ref }}</td><td><a class="lk" href="{% url 'orasec_supplier' s.id %}">{{ s.name }}</a></td><td><span class="b b-{{ s.tier }}">{{ s.get_tier_display }}</span></td><td>{% trans "No approved assessment" %}</td></tr>{% endfor %}
+  {% for s in sup_overdue %}<tr><td class="mono">{{ s.ref }}</td><td><a class="lk" href="{% url 'orasec_supplier' s.id %}">{{ s.name }}</a></td><td><span class="b b-{{ s.tier }}">{{ s.get_tier_display }}</span></td><td>{% trans "Review overdue" %}</td></tr>{% endfor %}
+  {% if not sup_unassessed and not sup_overdue %}<tr><td class="empty">{% trans "All suppliers assessed and current." %}</td></tr>{% endif %}
+  </tbody></table></div>
+  <div class="card"><h2>{% trans "Related ISO 27001 checks" %}</h2>
+  <table class="t"><tbody>{% for i in checks %}<tr><td class="mono"><a class="lk" href="{% url 'orasec_control' i.control.id %}">{{ i.control.ref }}</a></td><td>{{ i.control.title }}</td>
+  <td><span class="b b-{{ i.auto_status }}">{{ i.get_auto_status_display }}</span><div class="muted" style="font-size:.75rem">{{ i.auto_detail|truncatechars:110 }}</div></td></tr>{% endfor %}</tbody></table></div>
+</div>
+{% endblock %}
+

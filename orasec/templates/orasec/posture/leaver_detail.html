@@ -1,0 +1,23 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{{ r.ref }} | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{{ r.ref }} · {{ r.person.get_full_name|default:r.person.username }}</h1>
+<div class="sub">{{ r.get_kind_display }} · {% trans "leaving" %} {{ r.leaving_date }} · {% trans "due" %} {{ r.due_date }}{% if r.overdue %} <span class="b b-fail">{% trans "overdue" %}</span>{% endif %} · {{ r.get_status_display }} · {% trans "started by" %} {% if r.started_by %}{{ r.started_by.get_full_name|default:r.started_by.username }}{% else %}OraSec ({% trans "account deactivated" %}){% endif %}</div></div>
+<a class="btn" href="{% url 'orasec_leavers' %}">← {% trans "All records" %}</a></div>
+{% if messages %}{% for m in messages %}<div class="card" style="margin-bottom:.6rem">{{ m }}</div>{% endfor %}{% endif %}
+<div class="card"><h3>{% trans "Checklist (FRM-002)" %}</h3><table class="t"><tbody>
+{% for s in r.steps %}<tr><td style="width:2rem">{% if s.done %}✅{% else %}⬜{% endif %}</td><td>{{ s.label }}{% if s.note %}<div class="muted" style="font-size:.78rem">{{ s.note }}</div>{% endif %}</td>
+<td class="muted" style="font-size:.8rem">{% if s.done %}{{ s.by }} · {{ s.at|slice:":16" }}{% elif request.user.is_superuser and r.status == "open" and request.user.id != r.person_id %}
+<form method="post" action="{% url 'orasec_leaver_action' r.id %}" style="display:flex;gap:.3rem">{% csrf_token %}<input type="hidden" name="action" value="tick"><input type="hidden" name="step" value="{{ s.key }}"><input name="note" placeholder="{% trans 'note' %}" style="width:10rem"><button class="btn">{% trans "Done" %}</button></form>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="card" style="margin-top:1rem"><h3>{% trans "Assets that need a new owner" %}</h3>
+{% if pending %}<ul>{% for a in pending %}<li><a class="lk" href="{% url 'orasec_asset' a.id %}">{{ a.name }}</a></li>{% endfor %}</ul>
+{% if request.user.is_superuser and r.status == "open" %}<form method="post" action="{% url 'orasec_leaver_action' r.id %}" class="filters">{% csrf_token %}<input type="hidden" name="action" value="reassign">
+<select name="new_owner" required>{% for u in people %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select><button class="btn btn-p">{% trans "Move all to this person" %}</button></form>{% endif %}
+{% else %}<p class="muted">{% trans "None." %}</p>{% endif %}</div>
+{% if r.status == "open" and request.user.is_superuser %}<div class="card" style="margin-top:1rem"><h3>{% trans "Sign off" %}</h3>
+{% if can_sign %}<form method="post" action="{% url 'orasec_leaver_action' r.id %}" class="filters">{% csrf_token %}<input type="hidden" name="action" value="signoff"><input name="note" placeholder="{% trans 'Note (optional)' %}"><button class="btn btn-p">{% trans "Sign off" %}</button></form>
+{% else %}<p class="muted">{% trans "Sign-off opens when every step is done, for someone other than the leaver and whoever started the record." %}</p>{% endif %}</div>
+{% elif r.signed_off_by %}<div class="card" style="margin-top:1rem">{% trans "Signed off by" %} {{ r.signed_off_by.get_full_name|default:r.signed_off_by.username }} · {{ r.signed_off_at }}</div>{% endif %}
+{% endblock %}

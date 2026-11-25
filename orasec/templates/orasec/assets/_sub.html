@@ -1,0 +1,53 @@
+{% load i18n %}
+<style>
+.ai-nav{display:flex;flex-wrap:wrap;gap:.4rem;margin:0 0 1rem}
+.ai-nav a{padding:.35rem .7rem;border-radius:999px;border:1px solid var(--os-line,#2a3a3f);font-size:.82rem;text-decoration:none;color:inherit}
+.ai-nav a.on{background:#0f766e;border-color:#0f766e;color:#fff}
+.ai-bar{display:flex;align-items:center;gap:.5rem;margin:.28rem 0;font-size:.84rem}
+.ai-bar .lb{flex:0 0 46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ai-bar .tr{flex:1;height:.55rem;background:rgba(127,127,127,.18);border-radius:4px;overflow:hidden}
+.ai-bar .fl{height:100%;background:#14b8a6}
+.ai-bar .n{flex:0 0 2.6rem;text-align:right;font-variant-numeric:tabular-nums}
+.ai-own{font-size:.78rem;line-height:1.3}
+.ai-tools{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+#ai-ora{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:60}
+#ai-ora .box{background:var(--os-card,#13201f);color:inherit;border-radius:12px;padding:1.1rem;width:min(760px,94vw);max-height:88vh;overflow:auto}
+#ai-ora textarea{width:100%;min-height:5.5rem;padding:.5rem;border-radius:8px}
+#ai-out h3{margin:.9rem 0 .3rem}#ai-out table{width:100%;font-size:.8rem}
+</style>
+<div class="ai-nav">
+  <a href="{% url 'orasec_assets' %}" class="{% if active == 'dash' %}on{% endif %}">{% trans "Dashboard" %}</a>
+  <a href="{% url 'orasec_assets_list' %}" class="{% if active == 'all' %}on{% endif %}">{% trans "All assets" %}</a>
+  {% for c in d.categories %}<a href="{% url 'orasec_assets_group' c.slug %}" class="{% if group == c.slug %}on{% endif %}">{{ c.label }} <span class="muted">{{ c.n }}</span></a>{% endfor %}
+</div>
+<div id="ai-ora"><div class="box">
+  <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">{% trans "Custom report with Ora" %}</h2><button class="btn" type="button" onclick="aiOra(false)">✕</button></div>
+  <p class="muted" style="font-size:.85rem">{% trans "Describe the report you need. Ora writes it from the live inventory only (no IP addresses)." %}</p>
+  <form id="ai-form">{% csrf_token %}
+    <textarea name="prompt" placeholder="{% trans 'e.g. Management summary of business-critical cloud services, who owns them and where the data sits' %}"></textarea>
+    <div class="ai-tools" style="margin-top:.5rem">
+      <select name="group"><option value="">{% trans "All groups" %}</option>{% for c in d.categories %}<option value="{{ c.slug }}" {% if group == c.slug %}selected{% endif %}>{{ c.label }}</option>{% endfor %}</select>
+      <button class="btn btn-p" type="button" onclick="aiRun('json')">{% trans "Write report" %}</button>
+      <button class="btn" type="button" onclick="aiRun('pdf')">{% trans "Download as PDF" %}</button>
+      <span id="ai-st" class="muted" style="font-size:.82rem"></span>
+    </div>
+  </form>
+  <div id="ai-out"></div>
+</div></div>
+<script>
+function aiOra(on){document.getElementById('ai-ora').style.display=on?'flex':'none'}
+function aiEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+async function aiRun(fmt){
+  const f=document.getElementById('ai-form'),fd=new FormData(f),st=document.getElementById('ai-st'),out=document.getElementById('ai-out');
+  fd.append('format',fmt);st.textContent='{% trans "Ora is writing…" %}';
+  try{
+    const r=await fetch('{% url "orasec_assets_ora_report" %}',{method:'POST',body:fd,credentials:'same-origin'});
+    if(fmt==='pdf'&&r.ok){const b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='Asset-Report.pdf';a.click();st.textContent='';return}
+    const j=await r.json();if(!r.ok){st.textContent=j.error||'Failed';return}
+    const p=j.report;let h='<h2>'+aiEsc(p.title)+'</h2><p>'+aiEsc(p.summary)+'</p>';
+    for(const s of p.sections){h+='<h3>'+aiEsc(s.heading)+'</h3>'+s.paragraphs.map(x=>'<p>'+aiEsc(x)+'</p>').join('');
+      if(s.table&&s.table.columns.length){h+='<table class="t"><thead><tr>'+s.table.columns.map(c=>'<th>'+aiEsc(c)+'</th>').join('')+'</tr></thead><tbody>'+s.table.rows.map(r=>'<tr>'+r.map(c=>'<td>'+aiEsc(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table>'}}
+    out.innerHTML=h;st.textContent='';
+  }catch(e){st.textContent='{% trans "Something went wrong. Try again." %}'}
+}
+</script>

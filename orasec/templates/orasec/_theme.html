@@ -1,0 +1,99 @@
+{% comment %}
+OraSec "security console" theme: cool neutrals, dark navigation rail, crisper surfaces.
+Loaded after tailwind-out.css / orasec.css and only re-maps their design tokens plus a few frame styles, so every
+page picks it up without template changes. Remove the include in base.html to fall back to the previous look.
+{% endcomment %}
+<style>
+  :root {
+    /* surfaces + ink: cool slate instead of warm dust */
+    --color-ground:#f2f5f8; --color-frame:#ffffff; --color-surface:#ffffff; --color-surface-2:#f8fafc; --color-surface-3:#eef2f6;
+    --color-border:#e1e7ee; --color-border-strong:#c2ccd7;
+    --color-text:#0e2328; --color-text-muted:#4d5f67; --color-text-faint:#6a7b83;
+    --color-gray-50:#f8fafc; --color-gray-100:#f1f5f9; --color-gray-200:#e2e8f0; --color-gray-300:#cbd5e1; --color-gray-400:#94a3b8;
+    --color-gray-500:#64748b; --color-gray-600:#475569; --color-gray-700:#334155; --color-gray-800:#1e293b; --color-gray-900:#0f2a30; --color-gray-950:#06171b;
+    --color-slate-50:#f8fafc; --color-slate-100:#f1f5f9; --color-slate-200:#e2e8f0; --color-slate-300:#cbd5e1; --color-slate-400:#94a3b8;
+    --color-slate-500:#64748b; --color-slate-600:#475569; --color-slate-700:#334155; --color-slate-800:#1e293b; --color-slate-900:#0f2a30; --color-slate-950:#06171b;
+    /* legacy accent (upstream orange) -> OraSec teal, so buttons, tabs and links share one brand colour */
+    --color-dd-primary-50:#e8f7f4; --color-dd-primary-100:#ccefe8; --color-dd-primary-200:#9fdfd3; --color-dd-primary-300:#66c9b8; --color-dd-primary-400:#2fb39c;
+    --color-dd-primary-500:#00a890; --color-dd-primary-600:#008f7b; --color-dd-primary-700:#00756a; --color-dd-primary-800:#005e55; --color-dd-primary-900:#004740;
+    --color-dd-accent:#00756a; --color-dd-accent-hover:#005e55; --color-dd-accent-dark:#004740; --color-dd-accent-light:#ccefe8;
+    --os-rail:#0d1514; --os-rail-2:#121c1b; --os-rail-ink:#c6d6d2; --os-rail-mute:#6f8a85; --os-accent:#2fd0b8;
+    --os-shadow:0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.05);
+  }
+  body { background:var(--color-ground); }
+
+  /* ---- navigation rail (dark) ---- */
+  #os-sidebar { background:linear-gradient(180deg,var(--os-rail-2) 0%,var(--os-rail) 100%) !important; color:var(--os-rail-ink) !important;
+                border-inline-end:1px solid #1d2a28 !important; scrollbar-color:#2a3a38 transparent !important; }
+  #os-sidebar .os-logo-bar { background:transparent !important; border-bottom:1px solid rgba(255,255,255,.07) !important; }
+  #os-sidebar a, #os-sidebar button { color:var(--os-rail-ink) !important; font-size:.9rem !important; position:relative; }
+  #os-sidebar a:hover, #os-sidebar button:hover { background:rgba(255,255,255,.06) !important; color:#fff !important; }
+  #os-sidebar nav i.fa-solid { color:var(--os-rail-mute) !important; }
+  #os-sidebar a:hover i.fa-solid { color:var(--os-accent) !important; }
+  #os-sidebar div[x-data] > div a { color:#9fb5b0 !important; font-size:.84rem !important; }
+  #os-sidebar div[x-data] > div a:hover { color:#fff !important; }
+  #os-sidebar a.os-active { background:rgba(47,208,184,.12) !important; color:#fff !important; }
+  #os-sidebar a.os-active::before { content:""; position:absolute; inset-inline-start:-.5rem; top:.3rem; bottom:.3rem; width:3px; border-radius:0 3px 3px 0; background:var(--os-accent); }
+  #os-sidebar a.os-active i.fa-solid { color:var(--os-accent) !important; }
+  #os-sidebar .border-border, #os-sidebar .border-t { border-color:rgba(255,255,255,.07) !important; }
+  #os-sidebar .os-logo-dark { display:block; } #os-sidebar .os-logo-light { display:none; }
+
+  /* ---- top bar ---- */
+  header.sticky { background:rgba(255,255,255,.86) !important; backdrop-filter:saturate(1.4) blur(8px); border-color:var(--color-border) !important; }
+  #simple_search { border-radius:.55rem 0 0 .55rem !important; border-color:var(--color-border-strong) !important; background:#f8fafc !important; }
+  #simple_search:focus { background:#fff !important; border-color:#00a890 !important; box-shadow:0 0 0 3px rgba(0,168,144,.15) !important; outline:none; }
+  #simple_search_submit { border-radius:0 .55rem .55rem 0 !important; }
+
+  /* ---- surfaces ---- */
+  .panel, .card, .os-card, .bg-surface { border-radius:12px; }
+  .panel, .panel-default { border-color:var(--color-border) !important; box-shadow:var(--os-shadow); }
+  .panel-heading { border-radius:12px 12px 0 0; }
+  .btn { border-radius:.5rem; }
+  .btn-primary { background-color:#00756a; border-color:#00756a; }
+  .btn-primary:hover { background-color:#005e55; border-color:#005e55; }
+  ul.breadcrumb.main { font-size:.82rem; }
+
+  /* ---- data tables ---- */
+  table.table > thead > tr > th, table.dataTable > thead > tr > th { font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; color:var(--color-text-muted); font-weight:700; }
+  table.table > tbody > tr:hover > td, table.dataTable > tbody > tr:hover > td { background:#f6f9fb; }
+
+  /* ---- focus visibility (keyboard users) ---- */
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline:2px solid #00a890; outline-offset:2px; }
+
+  /* ---- layout: content always fills the space beside the rail ---- */
+  #page-wrapper > .container-fluid { width:100%; max-width:none; }
+  #base-content { flex:1 1 100%; width:100%; max-width:100%; min-width:0; }
+  #base-content img, #base-content canvas { max-width:100%; }
+
+  /* ---- "you are here" ---- */
+  #os-sidebar div[x-data] > div a.os-active { color:#fff !important; font-weight:600; }
+  #os-sidebar a.os-active-parent { color:#fff !important; }
+  #os-sidebar a.os-active-parent > i.fa-solid:first-child { color:var(--os-accent) !important; }
+  /* group closed by hand: the heading itself carries the marker so you still see where you are */
+  #os-sidebar a.os-active-parent[aria-expanded="false"] { background:rgba(47,208,184,.12) !important; }
+  #os-sidebar a.os-active-parent[aria-expanded="false"]::before { content:""; position:absolute; inset-inline-start:-.5rem; top:.3rem; bottom:.3rem; width:3px; border-radius:0 3px 3px 0; background:var(--os-accent); }
+  [dir="rtl"] #os-sidebar a.os-active::before, [dir="rtl"] #os-sidebar a.os-active-parent::before { border-radius:3px 0 0 3px; }
+
+  /* ---- narrow screens: rail slides in from a menu button ---- */
+  .os-nav-toggle, .os-nav-backdrop { display:none; }
+  @media (max-width:1023.98px) {
+    #os-sidebar { width:min(17rem,85vw) !important; transform:translateX(-100%); visibility:hidden;
+                  transition:transform .22s ease, visibility 0s linear .22s; }
+    [dir="rtl"] #os-sidebar { transform:translateX(100%); }
+    body.os-nav-shown #os-sidebar { transform:none; visibility:visible; transition:transform .22s ease; box-shadow:0 12px 40px rgba(0,0,0,.4); }
+    #wrapper { padding-inline-start:0 !important; }
+    .os-nav-toggle { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; width:2.4rem; height:2.4rem;
+                     border-radius:.5rem; border:1px solid var(--color-border); background:transparent; color:var(--color-text); }
+    .os-nav-toggle:hover { background:var(--color-surface-3); }
+    .os-nav-backdrop { position:fixed; inset:0; z-index:45; background:rgba(6,23,27,.45); }
+    body.os-nav-shown .os-nav-backdrop { display:block; }
+    body.os-nav-shown { overflow:hidden; }
+    header.sticky { padding-inline:.75rem !important; gap:.6rem !important; }
+    #page-wrapper > .container-fluid { padding-inline:.75rem; }
+    /* OraSec panels: wide tables scroll inside their card instead of pushing the page sideways */
+    #base-content table.t, #base-content table.dk, #base-content table.ip { display:block; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    #base-content .pn, #base-content .k { min-width:0; }
+  }
+  @media (prefers-reduced-motion: reduce) { #os-sidebar { transition:none !important; } }
+</style>
+

@@ -1,0 +1,28 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{{ a.ref }} | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}
+<div class="hdr"><div><h1>{{ a.ref }} · {{ a.supplier.name }}</h1><div class="sub">{{ a.get_kind_display }} · <span class="b b-{{ a.status }}">{{ a.get_status_display }}</span> · {% blocktrans %}Approvals {{ approvals }} of {{ need }} needed{% endblocktrans %}</div></div>
+<div style="display:flex;gap:.4rem" class="noprint"><a class="btn" href="{% url 'orasec_supplier' a.supplier.id %}">← {{ a.supplier.ref }}</a>
+{% if can_submit %}<form method="post" class="inline">{% csrf_token %}<input type="hidden" name="action" value="submit"><button class="btn btn-p">{% trans "Submit for approval" %}</button></form>{% endif %}</div></div>
+<div class="grid g2">
+<div class="card"><h2>{% trans "Due-diligence checklist" %}</h2><dl class="kv">
+<dt>{% trans "Independent assurance" %}</dt><dd>{{ a.assurance_ok|yesno:"✓ Reviewed,✗ Not reviewed" }}</dd>
+<dt>{% trans "Data location" %}</dt><dd>{{ a.data_location_ok|yesno:"✓ Meets STD-003,✗ Not confirmed" }}</dd>
+<dt>{% trans "Breach and security terms" %}</dt><dd>{{ a.breach_terms_ok|yesno:"✓ In contract,✗ Not confirmed" }}</dd>
+<dt>{% trans "Encryption" %}</dt><dd>{{ a.encryption_ok|yesno:"✓ In transit and at rest,✗ Not confirmed" }}</dd>
+<dt>{% trans "Access, MFA, logging" %}</dt><dd>{{ a.access_ok|yesno:"✓ Configured,✗ Not confirmed" }}</dd>
+<dt>{% trans "Sub-processors" %}</dt><dd>{{ a.subprocessors_ok|yesno:"✓ Reviewed,✗ Not reviewed" }}</dd>
+<dt>{% trans "Incidents" %}</dt><dd>{{ a.incidents|default:"—" }}</dd><dt>{% trans "Findings" %}</dt><dd>{{ a.findings|default:"—" }}</dd>
+<dt>{% trans "Supplier risk" %}</dt><dd>L{{ a.likelihood }} × I{{ a.impact }} = <span class="b b-{{ a.band }}">{{ a.score }} {{ a.band }}</span></dd>
+<dt>{% trans "Recommendation" %}</dt><dd>{{ a.get_recommendation_display }}{% if a.conditions %}: {{ a.conditions }}{% endif %}</dd>
+<dt>{% trans "Assessed by" %}</dt><dd>{{ a.assessed_by.get_full_name|default:"—" }}, {{ a.assessed_on|date:"j M Y" }}</dd>
+<dt>{% trans "Evidence" %}</dt><dd>{% if a.evidence %}<a class="lk" href="{{ a.evidence.url }}">{% trans "Download" %}</a>{% else %}—{% endif %}</dd></dl></div>
+<div class="card"><h2>{% trans "Decisions" %}</h2><table class="t"><tbody>{% for d in decisions %}<tr><td>{{ d.decided_by.get_full_name|default:d.decided_by }}</td><td><span class="b b-{% if d.decision == 'reject' %}rejected{% else %}approved{% endif %}">{{ d.get_decision_display }}</span></td><td>{{ d.decided_at|date:"j M Y H:i" }}</td><td>{{ d.note }}</td></tr>
+{% empty %}<tr><td class="empty">{% trans "No decisions yet." %}</td></tr>{% endfor %}</tbody></table>
+{% if form %}<form method="post" class="f" style="margin-top:.8rem">{% csrf_token %}<input type="hidden" name="action" value="decide">{{ form.as_p }}<button class="btn btn-p">{% trans "Record decision" %}</button></form>
+{% elif a.status == "submitted" %}<div class="muted" style="margin-top:.6rem;font-size:.85rem">{% trans "Waiting for an approver who is not the assessor or requester." %}</div>{% endif %}
+</div></div>
+{% endblock %}
+

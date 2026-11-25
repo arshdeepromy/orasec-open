@@ -1,0 +1,27 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{{ a.ref }} | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}
+<div class="hdr"><div><h1>{{ a.ref }} {{ a.title }}</h1><div class="sub"><span class="b b-{{ a.status }}">{{ a.get_status_display }}</span> · {% trans "Assessed" %} {{ a.assessed_on|date:"j M Y" }} · {% trans "Next due" %} {{ a.next_assessment|date:"j M Y" }}</div></div>
+<div style="display:flex;gap:.4rem" class="noprint"><a class="btn" href="{% url 'orasec_risk_assessments' %}">← {% trans "Assessments" %}</a><button class="btn" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+{% if can_compliance %}<a class="btn" href="{% url 'orasec_risk_assessment_edit' a.id %}">{% trans "Edit" %}</a>{% endif %}
+{% if can_submit %}<form method="post" class="inline">{% csrf_token %}<input type="hidden" name="action" value="submit"><button class="btn btn-p">{% trans "Submit to Director" %}</button></form>{% endif %}</div></div>
+<div class="grid g2" style="margin-bottom:1rem">
+<div class="card"><h2>{% trans "Assessment" %}</h2><dl class="kv">
+<dt>{% trans "Scope" %}</dt><dd>{{ a.scope|default:"—" }}</dd><dt>{% trans "Method" %}</dt><dd>{{ a.method }}</dd>
+<dt>{% trans "Prepared" %}</dt><dd>{% if a.prepared_for %}{% blocktrans with r=a.prepared_for %}On behalf of the {{ r }}{% endblocktrans %}{% endif %}{% if a.prepared_by %} · {{ a.prepared_by.get_full_name }}{% endif %}</dd>
+<dt>{% trans "Summary" %}</dt><dd>{{ a.summary|default:"—" }}</dd>
+<dt>{% trans "Workbook" %}</dt><dd>{% if a.file %}<a class="lk" href="{{ a.file.url }}">{% trans "Download" %}</a>{% else %}—{% endif %}</dd></dl></div>
+<div class="card"><h2>{% trans "Approval" %}</h2><dl class="kv"><dt>{% trans "Decision" %}</dt><dd>{% if a.decided_by %}{{ a.get_status_display }} {% trans "by" %} {{ a.decided_by.get_full_name }}, {{ a.decided_at|date:"j M Y H:i" }}{% else %}—{% endif %}</dd>
+<dt>{% trans "Note" %}</dt><dd>{{ a.decision_note|default:"—" }}</dd></dl>
+{% if may_decide %}<form method="post" class="f" style="margin-top:.8rem">{% csrf_token %}<p><label>{% trans "Note" %}</label><textarea name="note" rows="2" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"></textarea></p>
+<button class="btn btn-p" name="action" value="approve">{% trans "Approve" %}</button> <button class="btn btn-d" name="action" value="return">{% trans "Return" %}</button></form>{% endif %}</div></div>
+<div class="card" style="margin-bottom:1rem"><h2>{% trans "Risks from this assessment" %}</h2><table class="t"><thead><tr><th>Ref</th><th>{% trans "Risk" %}</th><th>{% trans "Category" %}</th><th class="num">{% trans "Inherent" %}</th><th class="num">{% trans "Target" %}</th><th>{% trans "Owner" %}</th><th>{% trans "Status" %}</th></tr></thead><tbody>
+{% for r in risks %}<tr><td class="mono">{{ r.ref }}</td><td><a class="lk" href="{% url 'orasec_risk' r.id %}">{{ r.title }}</a>{% if r.source_ref %} <span class="muted mono">({{ r.source_ref }})</span>{% endif %}</td><td>{{ r.category }}</td>
+<td class="num"><span class="b b-{{ r.inherent_band }}">{{ r.inherent_score }}</span></td><td class="num">{% if r.residual_score %}<span class="b b-{{ r.residual_band }}">{{ r.residual_score }}</span>{% else %}—{% endif %}</td>
+<td>{{ r.owner.get_full_name|default:"—" }}</td><td><span class="b b-{{ r.status }}">{{ r.get_status_display }}</span></td></tr>
+{% empty %}<tr><td colspan="7" class="empty">{% trans "No risks linked." %}</td></tr>{% endfor %}</tbody></table></div>
+{% if opps %}<div class="card"><h2>{% trans "Opportunities" %}</h2><table class="t"><tbody>{% for o in opps %}<tr><td class="mono">{{ o.ref }}</td><td>{{ o.title }}</td><td>{{ o.benefit }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+{% endblock %}
+

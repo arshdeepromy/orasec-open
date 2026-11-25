@@ -1,0 +1,47 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Plugins | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr">
+  <div>
+    <h1>{% trans "Plugins" %}</h1>
+    <div class="sub">{% trans "Every integration is a plugin. Turn on only what you use. Turning a plugin off stops it; nothing it already collected is deleted." %}</div>
+  </div>
+  <div class="sub" data-testid="plugins-count">{{ on_count }} {% trans "of" %} {{ total }} {% trans "working" %}</div>
+</div>
+{% for g in groups %}
+<h2 style="margin:1.2rem 0 .6rem">{{ g.name }}</h2>
+<div class="card" style="padding:0">
+<table class="t">
+  <tbody>
+  {% for p in g.rows %}
+    <tr data-plugin="{{ p.key }}">
+      <td style="width:2.4rem;text-align:center"><i class="fa-solid {{ p.icon }}"></i></td>
+      <td>
+        <b>{{ p.name }}</b>
+        <div class="muted" style="font-size:.85rem">{{ p.summary }}</div>
+        {% if p.missing %}<div class="muted" style="font-size:.8rem;margin-top:.2rem"><i class="fa-solid fa-circle-info"></i> {{ p.missing }}</div>{% endif %}
+        {% if p.on and p.off_note %}<div class="muted" style="font-size:.8rem;margin-top:.2rem">{% trans "If you turn it off:" %} {{ p.off_note }}</div>{% endif %}
+      </td>
+      <td style="width:7.5rem">
+        {% if p.active %}<span class="b b-ok">{% trans "On" %}</span>
+        {% elif p.on %}<span class="b b-warning">{% trans "On, not set up" %}</span>
+        {% else %}<span class="b b-muted">{% trans "Off" %}</span>{% endif %}
+      </td>
+      <td style="width:8rem;text-align:right">
+        {% if can_edit %}
+        <form method="post" action="{% url 'orasec_plugin_toggle' p.key %}" style="margin:0">
+          {% csrf_token %}
+          <input type="hidden" name="on" value="{% if p.on %}0{% else %}1{% endif %}">
+          <button type="submit" class="btn{% if not p.on %} btn-p{% endif %}" data-testid="toggle-{{ p.key }}">{% if p.on %}{% trans "Turn off" %}{% else %}{% trans "Turn on" %}{% endif %}</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endfor %}
+{% if not can_edit %}<p class="muted" style="margin-top:1rem;font-size:.85rem">{% trans "Only an administrator can turn plugins on or off." %}</p>{% endif %}
+{% endblock %}

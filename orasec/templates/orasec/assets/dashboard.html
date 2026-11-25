@@ -1,0 +1,44 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Asset Inventory | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "Asset Inventory" %}</h1>
+<div class="sub">{% trans "Live list of everything the organisation relies on, who owns it and where it sits. ISO/IEC 27001 A.5.9." %} {% trans "Updated" %} {{ d.generated|timesince }} {% trans "ago" %}.</div></div>
+<div class="ai-tools">
+  <a class="btn" href="{% url 'orasec_assets_xlsx' %}">{% trans "Excel" %}</a>
+  <a class="btn" href="{% url 'orasec_assets_pdf' %}">{% trans "PDF" %}</a>
+  <button class="btn btn-p" type="button" onclick="aiOra(true)">{% trans "Custom report with Ora" %}</button>
+  {% if request.user.is_superuser %}<a class="btn" href="?refresh=1">{% trans "Refresh" %}</a>{% endif %}
+</div></div>
+{% with active="dash" %}{% include "orasec/assets/_sub.html" %}{% endwith %}
+<div class="grid g4" style="margin-bottom:1rem">
+  <a class="card kpi" style="text-decoration:none" href="{% url 'orasec_assets_list' %}"><div class="l">{% trans "Assets" %}</div><div class="v">{{ d.total }}</div><div class="d">{{ d.auto_synced }} {% trans "kept current automatically" %}</div></a>
+  <a class="card kpi" style="text-decoration:none" href="{% url 'orasec_assets_list' %}?critical=1"><div class="l">{% trans "Business-critical" %}</div><div class="v">{{ d.business_critical }}</div></a>
+  <a class="card kpi" style="text-decoration:none" href="{% url 'orasec_assets_list' %}?attention=1"><div class="l">{% trans "No owner" %}</div><div class="v" {% if d.no_owner %}style="color:#f87171"{% endif %}>{{ d.no_owner }}</div></a>
+  <a class="card kpi" style="text-decoration:none" href="{% url 'orasec_assets_list' %}?attention=1"><div class="l">{% trans "Stale (7+ days unseen)" %}</div><div class="v" {% if d.stale %}style="color:#fbbf24"{% endif %}>{{ d.stale }}</div></a>
+  <div class="card kpi"><div class="l">{% trans "Offline" %}</div><div class="v">{{ d.offline }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Internet-exposed" %}</div><div class="v">{{ d.exposed }}</div></div>
+  <a class="card kpi" style="text-decoration:none" href="{% url 'orasec_assets_list' %}?sort=vulns"><div class="l">{% trans "With open vulnerabilities" %}</div><div class="v">{{ d.with_vulns }}</div></a>
+  <div class="card kpi"><div class="l">{% trans "Automatic sources" %}</div><div class="v">{{ d.sources|length }}</div></div>
+</div>
+<div class="grid g3" style="margin-bottom:1rem">
+  <div class="card"><h3>{% trans "By group" %}</h3>
+    {% for c in d.categories %}<a href="{% url 'orasec_assets_group' c.slug %}" style="text-decoration:none;color:inherit"><div class="ai-bar"><span class="lb">{{ c.label }}</span><span class="tr"><span class="fl" style="width:{% widthratio c.n d.total 100 %}%"></span></span><span class="n">{{ c.n }}</span></div></a>{% endfor %}</div>
+  <div class="card"><h3>{% trans "Where assets sit" %}</h3>
+    {% for loc, n in d.by_location %}<a href="{% url 'orasec_assets_list' %}?location={{ loc|urlencode }}" style="text-decoration:none;color:inherit"><div class="ai-bar"><span class="lb" title="{{ loc }}">{{ loc }}</span><span class="tr"><span class="fl" style="width:{% widthratio n d.total 100 %}%"></span></span><span class="n">{{ n }}</span></div></a>{% endfor %}</div>
+  <div class="card"><h3>{% trans "Owners" %}</h3><div class="muted" style="font-size:.75rem;margin-bottom:.3rem">{% trans "Jointly owned assets count for each owner." %}</div>
+    {% for o, n in d.by_owner %}<a href="{% url 'orasec_assets_list' %}?owner={{ o|urlencode }}" style="text-decoration:none;color:inherit"><div class="ai-bar"><span class="lb" title="{{ o }}">{{ o }}</span><span class="tr"><span class="fl" style="width:{% widthratio n d.total 100 %}%"></span></span><span class="n">{{ n }}</span></div></a>{% endfor %}</div>
+</div>
+<div class="card" style="margin-bottom:1rem"><h3>{% trans "Classification (POL-010)" %}</h3>
+  {% for l, n in d.by_classification %}<a href="{% url 'orasec_assets_list' %}?classification={{ l|lower }}" style="text-decoration:none;color:inherit"><div class="ai-bar"><span class="lb">{{ l }}</span><span class="tr"><span class="fl" style="width:{% widthratio n d.total 100 %}%"></span></span><span class="n">{{ n }}</span></div></a>{% endfor %}</div>
+<div class="grid g2">
+  <div class="card"><h3>{% trans "Needs attention" %}</h3>
+    <table class="t"><thead><tr><th>{% trans "Asset" %}</th><th>{% trans "Group" %}</th><th>{% trans "Why" %}</th></tr></thead><tbody>
+    {% for a in d.attention %}<tr><td><a class="lk" href="{% url 'orasec_asset' a.id %}">{{ a.name }}</a></td><td>{{ a.category }}</td><td>{{ a.why }}</td></tr>
+    {% empty %}<tr><td colspan="3" class="empty">{% trans "Nothing needs attention." %}</td></tr>{% endfor %}</tbody></table></div>
+  <div class="card"><h3>{% trans "Live sources" %}</h3>
+    <table class="t"><thead><tr><th>{% trans "Source" %}</th><th>{% trans "Status" %}</th><th>{% trans "Last sync" %}</th></tr></thead><tbody>
+    {% for s in d.sources %}<tr><td>{{ s.name }}</td><td>{% if s.status == "ok" %}<span class="b b-ok">ok</span>{% elif s.status == "warning" %}<span class="b b-Medium">{{ s.status }}</span>{% else %}<span class="b b-fail">{{ s.status }}</span>{% endif %}</td><td class="muted">{% if s.last_success %}{{ s.last_success|timesince }} {% trans "ago" %}{% else %}—{% endif %}</td></tr>
+    {% endfor %}<tr><td>{% trans "Supplier register" %}</td><td><span class="b b-ok">{% trans "live" %}</span></td><td class="muted">{% trans "on every change" %}</td></tr></tbody></table></div>
+</div>
+{% endblock %}

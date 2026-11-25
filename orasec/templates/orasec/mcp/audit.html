@@ -1,0 +1,28 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Connector call log | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}
+<div class="hdr"><div><h1>{% trans "Connector call log" %}</h1>
+<div class="sub">{% trans "Every call to the connector endpoint, also the refused ones: who, which tool, a short form of the arguments, the result, the client, the address and the time." %} {{ total }} {% trans "lines." %}</div></div>
+<div style="display:flex;gap:.4rem" class="noprint"><a class="btn" href="{% url 'orasec_mcp_clients' %}?all=1">{% trans "Connected clients" %}</a></div></div>
+
+{% if not enabled %}<div class="card" style="margin-bottom:1rem">{% trans "The connector endpoint is switched off on this OraSec." %}</div>{% endif %}
+
+<form method="get" class="card noprint" style="margin-bottom:1rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+<label>{% trans "User" %} <input type="text" name="user" value="{{ who }}" style="width:10rem"></label>
+<label>{% trans "Result" %} <select name="outcome"><option value="">{% trans "All" %}</option>{% for o in outcomes %}<option value="{{ o }}"{% if o == outcome %} selected{% endif %}>{{ o }}</option>{% endfor %}</select></label>
+<label><input type="checkbox" name="writes" value="1"{% if writes %} checked{% endif %}> {% trans "Changes only" %}</label>
+<button class="btn btn-p" type="submit">{% trans "Filter" %}</button></form>
+
+<div class="card"><table class="t"><thead><tr><th>{% trans "Time" %}</th><th>{% trans "User" %}</th><th>{% trans "Call" %}</th><th>{% trans "Arguments" %}</th><th>{% trans "Result" %}</th><th>{% trans "Client" %}</th><th>{% trans "Address" %}</th><th class="num">ms</th></tr></thead><tbody>
+{% for r in rows %}<tr><td class="mono">{{ r.created|date:"j M Y H:i:s" }}</td><td>{{ r.username|default:"—" }}{% if r.via %} <span class="b b-muted">{{ r.via }}</span>{% endif %}</td>
+<td>{{ r.tool|default:r.method }}{% if r.write %} <span class="b b-warn">{% trans "change" %}</span>{% endif %}</td><td class="mono" style="max-width:22rem;overflow-wrap:anywhere">{{ r.args }}</td>
+<td><span class="b {% if r.outcome == 'ok' %}b-approved{% elif r.outcome == 'tool_error' %}b-warn{% else %}b-rejected{% endif %}">{{ r.outcome }}</span>{% if r.detail %} <span class="sub">{{ r.detail }}</span>{% endif %}</td>
+<td>{{ r.client_name|default:"—" }}</td><td class="mono">{{ r.ip|default:"—" }}</td><td class="num">{{ r.ms }}</td></tr>
+{% empty %}<tr><td colspan="8" class="empty">{% trans "No calls yet." %}</td></tr>{% endfor %}</tbody></table></div>
+
+<div class="noprint" style="margin-top:.8rem;display:flex;gap:.5rem">
+{% if page > 1 %}<a class="btn" href="?page={{ page|add:'-1' }}&user={{ who|urlencode }}&outcome={{ outcome|urlencode }}{% if writes %}&writes=1{% endif %}">{% trans "Newer" %}</a>{% endif %}
+{% if has_next %}<a class="btn" href="?page={{ page|add:'1' }}&user={{ who|urlencode }}&outcome={{ outcome|urlencode }}{% if writes %}&writes=1{% endif %}">{% trans "Older" %}</a>{% endif %}</div>
+{% endblock %}

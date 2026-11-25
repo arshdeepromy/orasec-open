@@ -1,0 +1,14 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Run {{ run.id }} | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{{ run.connector.name }} — {% trans "run" %} #{{ run.id }}</h1>
+<div class="sub">{{ run.started_at|date:"j M Y H:i:s" }} · {{ run.triggered_by }} · <span class="b b-{{ run.status }}">{{ run.status }}</span> · {{ run.duration_seconds|default:"?" }}s</div></div>
+<a class="btn" href="{% url 'orasec_connector_detail' run.connector.id %}">← {% trans "Connector" %}</a></div>
+<div class="grid g2">
+  <div class="card"><h2>{% trans "API calls" %}</h2><pre>{{ run.log|default:"—" }}</pre></div>
+  <div class="card"><h2>{% trans "Statistics" %}</h2><pre>{{ stats }}</pre></div>
+</div>
+{% if run.error %}<div class="card" style="margin-top:1rem"><h2>{% trans "Error" %}</h2><pre>{{ run.error }}</pre></div>{% endif %}
+{% endblock %}
+

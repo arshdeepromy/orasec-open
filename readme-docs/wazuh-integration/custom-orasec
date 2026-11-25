@@ -1,0 +1,10 @@
+#!/bin/sh
+# Wazuh integration wrapper: runs custom-orasec.py with the Wazuh Python (same as the built-in slack integration).
+# Install in the manager volume wazuh_integrations (/var/ossec/integrations), owner root:wazuh, mode 750.
+WPYTHON_BIN="framework/python/bin/python3"
+OPENSSL_armcap=0
+export OPENSSL_armcap
+DIR_NAME="$(cd "$(dirname "$0")"; pwd -P)"
+SCRIPT_NAME="$(basename "$0")"
+WAZUH_PATH="${WAZUH_PATH:-$(cd "${DIR_NAME}/.."; pwd)}"
+exec "${WAZUH_PATH}/${WPYTHON_BIN}" "${DIR_NAME}/${SCRIPT_NAME}.py" "$@"

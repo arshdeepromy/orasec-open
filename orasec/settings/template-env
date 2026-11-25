@@ -1,0 +1,61 @@
+# Django Debug, don't enable on production!
+ORASEC_DEBUG=False
+
+# Enables the Django admin interface at /admin/. Off by default; uncomment
+# this line to expose it. Access is restricted to superusers regardless.
+# ORASEC_DJANGO_ADMIN_ENABLED=True
+
+# A secret key for a particular Django installation.
+ORASEC_SECRET_KEY=#ORASEC_SECRET_KEY#
+
+# Key for encrypting credentials in the manager
+ORASEC_CREDENTIAL_AES_256_KEY=#ORASEC_CREDENTIAL_AES_256_KEY#
+
+# Database URL, options: postgres://, to use unsafe characters encode with urllib.parse.encode
+ORASEC_DATABASE_URL=#ORASEC_DATABASE_URL#
+
+# Hosts/domain names that are valid for this site;
+ORASEC_ALLOWED_HOSTS=#ORASEC_ALLOWED_HOSTS#
+
+# WhiteNoise allows your web app to serve its own static files,
+# making it a self-contained unit that can be deployed anywhere without relying on nginx,
+# if using nginx then disable Whitenoise
+ORASEC_WHITENOISE=True
+
+# -------------------------------------------------------
+# Additional Settings / Override defaults in settings.py
+# -------------------------------------------------------
+
+# Timezone
+# ORASEC_TIME_ZONE=America/New_York
+
+# Track migrations through source control rather than making migrations locally
+# ORASEC_TRACK_MIGRATIONS=False
+
+# Whether to use HTTPOnly flag on the session cookie.
+# ORASEC_SESSION_COOKIE_HTTPONLY=True
+
+# Whether to use HttpOnly flag on the CSRF cookie.
+# ORASEC_CSRF_COOKIE_HTTPONLY=True
+
+# If True, the SecurityMiddleware redirects all non-HTTPS requests to HTTPS
+# ORASEC_SECURE_SSL_REDIRECT=False
+
+# Whether to use a secure cookie for the CSRF cookie.
+# ORASEC_CSRF_COOKIE_SECURE=False
+
+# If True, the SecurityMiddleware sets the X-Content-Type-Options: nosniff;
+# ORASEC_SECURE_CONTENT_TYPE_NOSNIFF=True
+
+# Show the open-source promo ("Upgrade to Pro") banner and the Pro link in the
+# user menu. Set to False to disable both.
+# ORASEC_OS_MESSAGE_ENABLED=True
+
+# Change the default language set
+# ORASEC_LANG=en-us
+
+# Security team name, used for outgoing emails
+# ORASEC_TEAM_NAME=Security
+
+# Admins for log emails
+# ORASEC_ADMINS=Aaron:aaron@localhost,Greg:greg@localhost

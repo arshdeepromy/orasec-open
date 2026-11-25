@@ -1,0 +1,18 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Supplier Register | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}
+<div class="hdr"><div><h1>{% trans "Supplier Register" %}</h1><div class="sub">{% trans "POL-015 and REG-006: every supplier, its tier, the data it receives, assurance and review status. ISO 27001 A.5.19–A.5.22." %}</div></div>
+<div style="display:flex;gap:.4rem" class="noprint"><a class="btn" href="{% url 'orasec_grc' %}">{% trans "GRC Dashboard" %}</a>
+{% if can_compliance %}<a class="btn btn-p" href="{% url 'orasec_supplier_new' %}"><i class="fa-solid fa-plus"></i> {% trans "New supplier request" %}</a>{% endif %}</div></div>
+<form class="filters noprint" method="get"><select name="tier"><option value="">{% trans "All tiers" %}</option>{% for k, v in tiers %}<option value="{{ k }}"{% if tier == k %} selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+<select name="status"><option value="">{% trans "All statuses" %}</option>{% for k, v in statuses %}<option value="{{ k }}"{% if st == k %} selected{% endif %}>{{ v }}</option>{% endfor %}</select><button class="btn">{% trans "Filter" %}</button></form>
+<div class="card"><table class="t"><thead><tr><th>ID</th><th>{% trans "Supplier" %}</th><th>{% trans "Service" %}</th><th>{% trans "Tier" %}</th><th>{% trans "Data" %}</th><th>{% trans "Location" %}</th><th>{% trans "Owner" %}</th><th>{% trans "Status" %}</th><th>{% trans "Next review" %}</th></tr></thead><tbody>
+{% for s in items %}<tr><td class="mono">{{ s.ref }}</td><td><a class="lk" href="{% url 'orasec_supplier' s.id %}"><b>{{ s.name }}</b></a></td><td>{{ s.service|truncatechars:70 }}</td>
+<td><span class="b b-{{ s.tier }}">{{ s.get_tier_display }}</span></td><td>{{ s.get_classification_display }}</td><td>{{ s.data_location|default:"—" }}</td>
+<td>{{ s.owner.get_full_name|default:"—" }}</td><td><span class="b b-{{ s.status }}">{{ s.get_status_display }}</span>{% if not s.n_assess %} <span class="b b-warn">{% trans "not assessed" %}</span>{% endif %}</td>
+<td>{% if s.review_overdue %}<span class="b b-overdue">{{ s.next_review|date:"j M Y"|default:"due" }}</span>{% else %}{{ s.next_review|date:"j M Y"|default:"—" }}{% endif %}</td></tr>
+{% empty %}<tr><td colspan="9" class="empty">{% trans "No suppliers recorded." %}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}
+

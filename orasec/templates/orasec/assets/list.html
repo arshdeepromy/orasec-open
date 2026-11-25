@@ -1,0 +1,48 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{{ group_label }} | Asset Inventory | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{{ group_label }}</h1><div class="sub">{{ rows|length }} {% trans "assets" %} · {% trans "live" %}</div></div>
+<div class="ai-tools">
+  <a class="btn" href="{% url 'orasec_assets_xlsx' %}?{{ qs }}">{% trans "Excel" %}</a>
+  <a class="btn" href="{% url 'orasec_assets_pdf' %}?{{ qs }}">{% trans "PDF" %}</a>
+  {% if request.user.is_superuser %}<a class="btn" href="{% url 'orasec_assets_xlsx' %}?{{ qs }}&network=1" title="{% trans 'Includes hostnames, IP and MAC addresses' %}">{% trans "Excel + network details" %}</a>{% endif %}
+  <button class="btn btn-p" type="button" onclick="aiOra(true)">{% trans "Custom report with Ora" %}</button>
+</div></div>
+{% if group %}{% include "orasec/assets/_sub.html" %}{% else %}{% with active="all" %}{% include "orasec/assets/_sub.html" %}{% endwith %}{% endif %}
+<form class="filters" method="get">
+  <input name="q" value="{{ request.GET.q }}" placeholder="{% trans 'Search name or hostname' %}">
+  {% if not group %}<select name="category"><option value="">{% trans "All groups" %}</option>{% for k, l in categories %}<option value="{{ k }}" {% if request.GET.category == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>{% endif %}
+  <select name="location"><option value="">{% trans "Anywhere" %}</option>{% for l in locations %}<option {% if request.GET.location == l %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <select name="owner"><option value="">{% trans "Any owner" %}</option>{% for o in owners %}<option {% if request.GET.owner == o %}selected{% endif %}>{{ o }}</option>{% endfor %}</select>
+  <select name="sort">{% for k, l in sorts %}{% endfor %}<option value="">{% trans "Sort: group" %}</option><option value="name" {% if request.GET.sort == "name" %}selected{% endif %}>{% trans "Name" %}</option><option value="location" {% if request.GET.sort == "location" %}selected{% endif %}>{% trans "Location" %}</option><option value="criticality" {% if request.GET.sort == "criticality" %}selected{% endif %}>{% trans "Criticality" %}</option><option value="vulns" {% if request.GET.sort == "vulns" %}selected{% endif %}>{% trans "Open vulnerabilities" %}</option><option value="last_seen" {% if request.GET.sort == "last_seen" %}selected{% endif %}>{% trans "Last seen" %}</option></select>
+  <select name="classification"><option value="">{% trans "Any classification" %}</option>{% for k, l in classes %}<option value="{{ k }}" {% if request.GET.classification == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <label style="font-size:.85rem"><input type="checkbox" name="critical" value="1" {% if request.GET.critical %}checked{% endif %}> {% trans "business-critical" %}</label>
+  <label style="font-size:.85rem"><input type="checkbox" name="attention" value="1" {% if request.GET.attention %}checked{% endif %}> {% trans "needs attention" %}</label>
+  <label style="font-size:.85rem"><input type="checkbox" name="view" value="grouped" {% if grouped %}checked{% endif %}> {% trans "grouped" %}</label>
+  <button class="btn">{% trans "Filter" %}</button>
+</form>
+<div class="muted" style="font-size:.78rem;margin:.2rem 0 .5rem">{% trans "Classification levels from POL-010. * = default for this kind of asset; choose a level to set it by hand." %}</div>
+<div class="card" style="overflow-x:auto">
+<table class="t">
+<thead><tr><th>{% trans "Asset" %}</th><th>{% trans "Group" %}</th><th>{% trans "Where it sits" %}</th><th>{% trans "Owner(s)" %}</th><th>{% trans "Classification" %}</th><th>{% trans "Criticality" %}</th><th>{% trans "Source" %}</th><th>{% trans "Online" %}</th><th class="num">{% trans "Open vulns" %}</th><th>{% trans "Last seen" %}</th></tr></thead>
+<tbody>
+{% regroup rows by category_label as grp %}
+{% for g in grp %}
+{% if grouped %}<tr><td colspan="10" style="font-weight:600;padding-top:.9rem">{{ g.grouper }} <span class="muted">({{ g.list|length }})</span></td></tr>{% endif %}
+{% for r in g.list %}
+<tr>
+  <td><a class="lk" href="{% url 'orasec_asset' r.id %}"><b>{{ r.name }}</b></a>{% if r.business_critical %} <span class="b b-High">{% trans "critical" %}</span>{% endif %}{% if r.exposed %} <span class="b b-Medium">{% trans "internet" %}</span>{% endif %}{% if r.stale %} <span class="b b-fail">{% trans "stale" %}</span>{% endif %}</td>
+  <td>{{ r.category_label }}<div class="muted" style="font-size:.74rem">{{ r.type }}</div></td>
+  <td style="font-size:.84rem">{{ r.location }}</td>
+  <td class="ai-own">{% for o in r.owners %}<div>{{ o }}</div>{% empty %}<span class="b b-fail">{% trans "no owner" %}</span>{% endfor %}</td>
+  <td>{% if request.user.is_superuser %}<form method="post" action="{% url 'orasec_asset_classification' r.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><select name="level" onchange="this.form.submit()" title="{% if r.classification_set %}{% trans 'set by hand' %}{% else %}{% trans 'default from POL-010' %}{% endif %}">{% for k, l in classes %}<option value="{{ k }}" {% if r.classification_key == k %}selected{% endif %}>{{ l }}{% if r.classification_key == k and not r.classification_set %} *{% endif %}</option>{% endfor %}</select></form>{% else %}{{ r.classification }}{% endif %}</td>
+  <td>{{ r.criticality|default:"—" }}{% if r.criticality %}/5{% endif %}</td>
+  <td style="font-size:.78rem">{{ r.sources|default:"—" }}</td>
+  <td>{% if r.online is None %}—{% elif r.online %}<span class="b b-ok">{% trans "yes" %}</span>{% else %}<span class="b b-fail">{% trans "no" %}</span>{% endif %}</td>
+  <td class="num">{{ r.open_vulns }}</td>
+  <td class="muted" style="font-size:.8rem">{% if r.sources == "manual" %}{% trans "recorded" %}{% elif r.last_seen %}{{ r.last_seen|timesince }} {% trans "ago" %}{% else %}—{% endif %}</td>
+</tr>
+{% endfor %}{% empty %}<tr><td colspan="10" class="empty">{% trans "No assets match." %}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

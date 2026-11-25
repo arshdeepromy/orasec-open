@@ -1,0 +1,51 @@
+[
+  {
+    "fields": {
+      "name": "Development"
+    },
+    "model": "orasec.development_environment",
+    "pk": 1
+  },
+  {
+    "fields": {
+      "name": "Staging"
+    },
+    "model": "orasec.development_environment",
+    "pk": 2
+  },
+  {
+    "fields": {
+      "name": "Production"
+    },
+    "model": "orasec.development_environment",
+    "pk": 3
+  },
+  {
+    "fields": {
+      "name": "Test"
+    },
+    "model": "orasec.development_environment",
+    "pk": 4
+  },
+  {
+    "fields": {
+      "name": "Pre-prod"
+    },
+    "model": "orasec.development_environment",
+    "pk": 5
+  },
+  {
+    "fields": {
+      "name": "Lab"
+    },
+    "model": "orasec.development_environment",
+    "pk": 6
+  },
+  {
+    "fields": {
+      "name": "Default"
+    },
+    "model": "orasec.development_environment",
+    "pk": 7
+  }
+]

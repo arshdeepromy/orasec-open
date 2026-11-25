@@ -1,0 +1,19 @@
+from orasec.models import Test
+from orasec.tools.ort.parser import OrtParser
+from unittests.orasec_test_case import OraSecTestCase, get_unit_tests_scans_path
+
+
+class TestOrtParser(OraSecTestCase):
+    def test_parse_without_file_has_no_finding(self):
+        parser = OrtParser()
+        findings = parser.get_findings(None, Test())
+        self.assertEqual(0, len(findings))
+
+    def test_parse_file_has_many_finding_one_tool(self):
+        testfile = (
+            get_unit_tests_scans_path("ort") / "evaluated-model-reporter-test-output.json").open(encoding="utf-8",
+        )
+        parser = OrtParser()
+        findings = parser.get_findings(testfile, Test())
+        testfile.close()
+        self.assertEqual(2, len(findings))

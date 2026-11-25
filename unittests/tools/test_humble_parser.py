@@ -1,0 +1,31 @@
+
+from orasec.models import Test
+from orasec.tools.humble.parser import HumbleParser
+from unittests.orasec_test_case import OraSecTestCase, get_unit_tests_scans_path
+
+
+class TestHumbleParser(OraSecTestCase):
+    def test_humble_parser_with_many_findings(self):
+        with (get_unit_tests_scans_path("humble") / "many_findings.json").open(encoding="utf-8") as testfile:
+            parser = HumbleParser()
+            findings = parser.get_findings(testfile, Test())
+            self.validate_locations(findings)
+            self.assertEqual(9, len(findings))
+            finding = findings[0]
+            self.assertEqual(self.get_unsaved_locations(finding)[0].host, "asdf.asf.hs")
+            self.assertEqual("Missing header: Clear-Site-Data", finding.title)
+            finding = findings[7]
+            self.assertEqual("Deprecated header: Strict-Transport-Security (Recommended Values)", finding.title)
+
+    def test_humble_parser_with_many_findings2(self):
+        with (get_unit_tests_scans_path("humble") / "many_findings2.json").open(encoding="utf-8") as testfile:
+            parser = HumbleParser()
+            findings = parser.get_findings(testfile, Test())
+            self.validate_locations(findings)
+            self.assertEqual(16, len(findings))
+            finding = findings[0]
+            self.assertEqual(self.get_unsaved_locations(finding)[0].host, "testestset.com")
+            self.assertEqual("Missing header: Clear-Site-Data", finding.title)
+            finding = findings[7]
+            self.assertEqual("Missing header: Referrer-Policy", finding.title)
+            self.assertEqual("This security Header is missing: Referrer-Policy", finding.description)

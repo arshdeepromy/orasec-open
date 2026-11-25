@@ -1,0 +1,169 @@
+/* App lock, PIN pad and PIN setup screens (components/security/*).
+   Colours only through the design-system variables, so every appearance
+   (light and dark) is covered. */
+
+.lock-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: calc(var(--safe-top) + 16px) 24px calc(var(--safe-bot) + 16px);
+  background: var(--canvas);
+  color: var(--text);
+  text-align: center;
+}
+
+.lock-title {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+/* Fixed-height text slots so the keypad never jumps when the copy changes. */
+.lock-sub {
+  margin-top: 8px;
+  min-height: 44px;
+  max-width: 32ch;
+  font-size: 14px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.pin-dots {
+  margin-top: 26px;
+  display: flex;
+  gap: 16px;
+}
+
+.pin-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  background: transparent;
+}
+
+.pin-dot.on {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.pin-error {
+  margin-top: 16px;
+  min-height: 44px;
+  max-width: 34ch;
+  font-size: 14px;
+  color: var(--danger);
+}
+
+.pin-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, 72px);
+  column-gap: 26px;
+  row-gap: 16px;
+  justify-content: center;
+}
+
+.pin-key {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 400;
+  font-family: var(--sans);
+  font-feature-settings: "tnum" 1;
+  color: var(--text);
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  transition: background-color 0.08s;
+}
+
+.pin-key:active:not(:disabled) {
+  background: var(--border-strong);
+}
+
+.pin-key:disabled {
+  opacity: 0.5;
+}
+
+.pin-key.plain {
+  background: transparent;
+  border-color: transparent;
+}
+
+.pin-key.plain.accent {
+  color: var(--accent-fg);
+}
+
+.pin-key.plain:disabled {
+  opacity: 0.3;
+}
+
+.pin-key:focus-visible,
+.pin-link:focus-visible,
+.lock-actions .btn:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.pin-footer {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.pin-link {
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--link, var(--accent-fg));
+}
+
+.lock-actions {
+  margin-top: 30px;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lock-mark {
+  margin-bottom: 18px;
+}
+
+/* Short phones in landscape / split screen: tighten the keypad. */
+@media (max-height: 640px) {
+  .pin-grid {
+    grid-template-columns: repeat(3, 60px);
+    row-gap: 10px;
+  }
+  .pin-key {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+  }
+  .lock-sub,
+  .pin-error {
+    min-height: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pin-key {
+    transition: none;
+  }
+}
+

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and older (API <= 30). android:allowBackup="false" already turns
+     Auto Backup off; these exclusions are a second line of defence should it
+     ever be switched back on. The session token (OraSecureStore.xml, sealed by
+     a Keystore key that never leaves this device), Capacitor Preferences, the
+     biometric plugin's data and the WebView storage (app lock PIN record) must
+     never travel to a backup or a new phone. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="OraSecureStore.xml" />
+    <exclude domain="sharedpref" path="CapacitorStorage.xml" />
+    <exclude domain="sharedpref" path="NativeBiometricSharedPreferences.xml" />
+    <exclude domain="root" path="app_webview/" />
+</full-backup-content>

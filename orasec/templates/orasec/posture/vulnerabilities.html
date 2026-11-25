@@ -1,0 +1,32 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Vulnerability Explorer | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "Vulnerability Explorer" %}</h1><div class="sub">{% trans "Each vulnerability once, with everything it affects. Sorted by known exploitation, priority and EPSS." %}</div></div></div>
+<form class="filters" method="get">
+  <input name="q" value="{{ request.GET.q }}" placeholder="{% trans 'CVE, package or title' %}" style="min-width:280px">
+  <label style="font-size:.85rem"><input type="checkbox" name="kev" value="1" {% if request.GET.kev %}checked{% endif %}> {% trans "Known exploited only (CISA KEV)" %}</label>
+  <button class="btn">{% trans "Search" %}</button>
+</form>
+<div class="card">
+<table class="t">
+<thead><tr><th>{% trans "Vulnerability" %}</th><th>{% trans "Severity" %}</th><th>KEV</th><th class="num">EPSS</th><th class="num">{% trans "Percentile" %}</th><th class="num">CVSS</th><th class="num">{% trans "Priority" %}</th><th class="num">{% trans "Findings" %}</th><th class="num">{% trans "Hosts" %}</th><th class="num">{% trans "Assets" %}</th><th>{% trans "Earliest due" %}</th></tr></thead>
+<tbody>
+{% for r in rows %}
+<tr>
+  <td><a class="lk mono" href="{% url 'orasec_vulnerability' r.vulnerability_id %}">{{ r.vulnerability_id }}</a></td>
+  <td><span class="b b-{{ r.severity_label }}">{{ r.severity_label }}</span></td>
+  <td>{% if r.kev %}<span class="b b-kev">KEV</span>{% endif %}</td>
+  <td class="num">{{ r.epss|floatformat:3|default:"—" }}</td>
+  <td class="num">{% if r.pct %}{% widthratio r.pct 1 100 %}%{% else %}—{% endif %}</td>
+  <td class="num">{{ r.cvss|default:"—" }}</td>
+  <td class="num"><b>{{ r.score|default:"—" }}</b></td>
+  <td class="num">{{ r.findings }}</td><td class="num">{{ r.hosts }}</td><td class="num">{{ r.products }}</td>
+  <td>{{ r.due|date:"j M Y"|default:"—" }}</td>
+</tr>
+{% empty %}<tr><td colspan="11" class="empty">{% trans "No matching vulnerabilities." %}</td></tr>{% endfor %}
+</tbody></table>
+<div class="muted" style="font-size:.78rem;margin-top:.6rem">{% trans "Showing the top 300. Use the search to narrow down." %}</div>
+</div>
+{% endblock %}
+

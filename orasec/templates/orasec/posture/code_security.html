@@ -1,0 +1,72 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Code & Repositories | OraSec{% endblock %}
+{% block posture %}
+<style>
+  .osp .feat { display:inline-flex; align-items:center; gap:.25rem; font-size:.72rem; font-weight:600; padding:.1rem .45rem; border-radius:99px; margin:.08rem .12rem .08rem 0; white-space:nowrap; }
+  .osp .f-on { background:#dcfce7; color:#166534; } .osp .f-off { background:#fbdddd; color:#9f1d17; } .osp .f-na { background:#f4f2ec; color:#6a655c; }
+  .osp tr.repo-off td:not(.mon) { opacity:.45; }
+  .osp td.mon, .osp th.mon { width:2.2rem; text-align:center; }
+  .osp td.mon input { width:1.05rem; height:1.05rem; cursor:pointer; accent-color:#1f6f5c; }
+  .osp .scopebar { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:.4rem; }
+  .osp .scopebar .hint { font-size:.8rem; }
+  .osp .scopebar .acts { display:flex; gap:.4rem; align-items:center; }
+  .osp .scopebar .dirty { font-size:.78rem; color:#9a3412; font-weight:600; }
+</style>
+<div class="hdr"><div><h1>{% trans "Code & Repositories" %}</h1>
+<div class="sub">{% trans "GitHub repositories and their security features, plus the nightly code scans (Semgrep SAST, Gitleaks secrets, Trivy dependencies and images) from your scan host." %}
+{% if run %} · {% trans "GitHub checked" %} {{ run.finished_at|timesince }} {% trans "ago" %}{% endif %}</div></div>
+<div style="display:flex;gap:.5rem">{% if gh %}<a class="btn" href="{% url 'orasec_connector_detail' gh.id %}"><i class="fa-brands fa-github"></i> {% trans "GitHub connector" %}</a>{% endif %}
+<a class="btn" href="{% url 'orasec_vulnerabilities' %}">{% trans "Vulnerability Explorer" %}</a></div></div>
+
+<div class="grid g4">
+  <div class="card kpi"><div class="l">{% trans "Repositories monitored" %}</div><div class="v">{{ kpi.repos }}</div><div class="d">{{ kpi.private }} {% trans "private" %}{% if kpi.off %} · {{ kpi.off }} {% trans "switched off" %}{% endif %}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Unprotected main branch" %}</div><div class="v" style="color:{% if kpi.unprotected %}#b3261e{% else %}#166534{% endif %}">{{ kpi.unprotected }}</div><div class="d">{% trans "direct pushes allowed" %}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Dependabot off" %}</div><div class="v" style="color:{% if kpi.dependabot_off %}#9a3412{% else %}#166534{% endif %}">{{ kpi.dependabot_off }}</div><div class="d">{% trans "no vulnerable-dependency alerts" %}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Open code findings" %}</div><div class="v">{{ kpi.code_open }}</div><div class="d">{{ kpi.secrets }} {% trans "exposed secrets" %} · {{ kpi.gh_open }} {% trans "repo settings" %}</div></div>
+</div>
+
+<div class="card" style="margin-top:1rem" x-data="{ dirty: false }">
+<form method="post" action="{% url 'orasec_code_scope' %}" @change="dirty = true">{% csrf_token %}
+<div class="scopebar"><h2 style="margin:0">{% trans "GitHub repositories" %}</h2>
+{% if repos %}<div class="acts">
+  {% if can_edit %}
+  <span class="dirty" x-show="dirty" x-cloak>{% trans "Unsaved changes" %}</span>
+  <button type="button" class="btn" @click="$el.form.querySelectorAll('input[name=monitor]').forEach(c => c.checked = true); dirty = true">{% trans "All" %}</button>
+  <button type="button" class="btn" @click="$el.form.querySelectorAll('input[name=monitor]').forEach(c => c.checked = false); dirty = true">{% trans "None" %}</button>
+  <button type="submit" class="btn" style="background:#1f6f5c;color:#fff;border-color:#1f6f5c" :disabled="!dirty" :style="!dirty && 'opacity:.5'"><i class="fa-solid fa-floppy-disk"></i> {% trans "Save monitored repos" %}</button>
+  {% else %}<span class="muted hint">{% trans "Only an admin can change which repositories are monitored." %}</span>{% endif %}
+</div>{% endif %}</div>
+{% if repos %}<div class="muted hint" style="font-size:.8rem;margin-bottom:.5rem">{% trans "Untick a repository that is not part of your organisation. OraSec then stops checking it on GitHub, closes its open findings as out of scope, and the nightly code scans skip it. Tick it again to bring it back." %}</div>
+<table class="t"><thead><tr><th class="mon" title="{% trans 'Monitor' %}"><i class="fa-regular fa-square-check"></i></th><th>{% trans "Repository" %}</th><th>{% trans "Visibility" %}</th><th>{% trans "Language" %}</th><th>{% trans "Last push" %}</th><th>{% trans "Security features" %}</th><th class="num">{% trans "Open" %}</th></tr></thead><tbody>
+{% for r in repos %}<tr class="{% if not r.monitored %}repo-off{% endif %}">
+  <td class="mon"><input type="checkbox" name="monitor" value="{{ r.full }}" {% if r.monitored %}checked{% endif %} {% if not can_edit %}disabled{% endif %} aria-label="{% trans 'Monitor' %} {{ r.full }}"></td>
+  <td><a class="lk" href="{% url 'orasec_asset' r.asset.id %}"><b>{{ r.full }}</b></a> <a class="muted" href="{{ r.url }}" target="_blank" rel="noopener" title="GitHub"><i class="fa-solid fa-arrow-up-right-from-square" style="font-size:.7rem"></i></a><div class="muted mono">{{ r.branch }}</div></td>
+  <td>{% if r.private %}<span class="b b-muted">{% trans "private" %}</span>{% else %}<span class="b b-Medium">{% trans "public" %}</span>{% endif %}</td>
+  <td>{{ r.language }}</td>
+  <td class="muted" style="white-space:nowrap">{{ r.pushed|slice:":10" }}</td>
+  <td>{% if not r.monitored %}<span class="feat f-na"><i class="fa-solid fa-eye-slash"></i> {% trans "Not monitored" %}</span>{% else %}{% with f=r.features %}
+    <span class="feat {% if f.dependabot %}f-on{% elif f.dependabot is False %}f-off{% else %}f-na{% endif %}">{% if f.dependabot %}✓{% else %}✕{% endif %} Dependabot</span>
+    <span class="feat {% if f.code_scanning %}f-on{% else %}f-na{% endif %}" title="{% trans 'GitHub code scanning (GHAS on private repos); Semgrep runs in the nightly code scan instead' %}">{% if f.code_scanning %}✓{% else %}–{% endif %} Code scanning</span>
+    <span class="feat {% if f.secret_scanning %}f-on{% elif r.private %}f-na{% else %}f-off{% endif %}">{% if f.secret_scanning %}✓{% else %}–{% endif %} Secret scanning</span>
+    <span class="feat {% if f.branch_protection is True %}f-on{% elif f.branch_protection is False %}f-off{% else %}f-na{% endif %}" title="{% if f.branch_protection and f.branch_protection != True %}{{ f.branch_protection }}{% endif %}">{% if f.branch_protection is True %}✓{% elif f.branch_protection is False %}✕{% else %}–{% endif %} Branch protection</span>
+  {% endwith %}{% endif %}</td>
+  <td class="num">{% if not r.monitored %}<span class="muted">—</span>{% elif r.open %}<a class="lk" href="{% url 'orasec_asset' r.asset.id %}"><b>{{ r.open }}</b></a>{% for s, n in r.sev %} <span class="b b-{{ s }}">{{ n }}</span>{% endfor %}{% else %}<span class="b b-ok">0</span>{% endif %}</td>
+</tr>{% endfor %}</tbody></table>
+<div class="muted" style="font-size:.75rem;margin-top:.5rem">{% trans "– = not available on this plan or repository type (GitHub code scanning and secret scanning on private repositories need GitHub Advanced Security). Branch protection on private repositories needs a paid plan or rulesets." %}</div>
+{% else %}<div class="empty">{% trans "No repositories yet. Add the GitHub connector under Automation → Connectors." %}</div>{% endif %}
+</form>
+</div>
+
+<div class="card" style="margin-top:1rem"><h2>{% trans "Code scans (nightly)" %}</h2>
+{% if tests %}<table class="t"><thead><tr><th>{% trans "Scan" %}</th><th>{% trans "Type" %}</th><th>{% trans "Application" %}</th><th>{% trans "Last import" %}</th><th class="num">{% trans "Open findings" %}</th></tr></thead><tbody>
+{% for x in tests %}<tr>
+  <td><a class="lk" href="{% url 'view_test' x.t.id %}">{{ x.t.title|default:x.t.test_type.name }}</a><div class="muted" style="font-size:.75rem">{{ x.t.test_type.name }}</div></td>
+  <td>{{ x.kind }}</td><td>{{ x.t.engagement.product.name }}</td>
+  <td class="muted" style="white-space:nowrap">{{ x.updated|date:"j M H:i" }}</td>
+  <td class="num">{% if x.open %}<b>{{ x.open }}</b>{% for s, n in x.sev %} <span class="b b-{{ s }}">{{ n }}</span>{% endfor %}{% else %}<span class="b b-ok">0</span>{% endif %}</td>
+</tr>{% endfor %}</tbody></table>
+{% else %}<div class="empty">{% trans "No code scans imported yet." %}</div>{% endif %}
+</div>
+{% endblock %}
+

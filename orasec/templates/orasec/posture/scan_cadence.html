@@ -1,0 +1,11 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Scan Cadence | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "Scan Cadence" %}</h1><div class="sub">{% trans "Expected scan frequency per asset vs the last scan. Due = past interval; overdue = past twice the interval; never = no scan recorded." %}</div></div></div>
+<div class="card"><table class="t"><thead><tr><th>{% trans "Asset" %}</th><th>{% trans "Kind" %}</th><th>{% trans "State" %}</th><th>{% trans "Last scan" %}</th><th class="num">{% trans "Age (days)" %}</th><th class="num">{% trans "Expected every" %}</th></tr></thead><tbody>
+{% for r in rows %}<tr><td>{% if r.product %}<a class="lk" href="{% url 'view_product' r.product.id %}">{{ r.product.name }}</a>{% else %}<a class="lk" href="{% url 'orasec_asset' r.asset.id %}">{{ r.asset.name }}</a>{% endif %}</td>
+<td class="muted">{% if r.product %}{% trans "application / product" %}{% else %}{{ r.asset.get_asset_type_display }}{% endif %}</td><td><span class="b b-{{ r.state }}">{{ r.state|cut:"_"|capfirst }}</span></td>
+<td>{{ r.last|date:"j M Y H:i"|default:"—" }}</td><td class="num">{{ r.age_days|default:"—" }}</td><td class="num">{{ r.expected_days }} d</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}
+

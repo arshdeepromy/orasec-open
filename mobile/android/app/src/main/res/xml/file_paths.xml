@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider roots (authority ${applicationId}.fileprovider). Files are
+     only ever handed out one at a time with a temporary read grant:
+       - cache: PDFs written by src/native/files.ts (shared/) to open/share,
+         and camera edits;
+       - the app's own Pictures folder: @capacitor/camera captures.
+     No shared external storage is exposed. -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path name="app_cache" path="." />
+    <external-files-path name="my_images" path="Pictures/" />
+</paths>

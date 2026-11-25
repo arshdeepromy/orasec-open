@@ -1,0 +1,17 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Triage rule | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% if obj %}{{ obj.name }}{% else %}{% trans "New triage rule" %}{% endif %}</h1></div><a class="btn" href="{% url 'orasec_triage_rules' %}">← {% trans "Rules" %}</a></div>
+<div class="grid" style="grid-template-columns:minmax(0,640px) 1fr">
+<form method="post" class="card f">{% csrf_token %}{{ form.as_p }}
+<button class="btn" name="preview" value="1">{% trans "Preview matches" %}</button> <button class="btn btn-p">{% trans "Save" %}</button></form>
+<div class="card" style="font-size:.84rem;line-height:1.6"><h2>{% trans "Reference" %}</h2>
+<p><b>{% trans "Conditions" %}</b> ({% trans "all must match" %}): <span class="mono">severity_in, band_in, kev, epss_percentile_gte, product_ids, scan_type_in, title_contains, component_contains, age_days_gte</span></p>
+<p><b>{% trans "Actions" %}</b>: <span class="mono">add_tags, assign_to (user id), mark_false_positive, mark_out_of_scope, planned_remediation_days, notify_emails, notify_webhook</span></p>
+<p class="mono" style="background:#fcfbf8;padding:.5rem;border-radius:6px">{"band_in": ["Urgent"], "kev": true}<br>{"add_tags": ["urgent-kev"], "notify_webhook": "https://hooks.slack.com/…", "planned_remediation_days": 7}</p>
+{% if preview %}<h2 style="margin-top:1rem">{% trans "Preview" %}: {{ preview.0 }} {% trans "matching findings" %}</h2>
+<table class="t"><tbody>{% for f in preview.1 %}<tr><td><span class="b b-{{ f.severity }}">{{ f.severity }}</span></td><td><a class="lk" href="{% url 'view_finding' f.id %}">{{ f.title|truncatechars:80 }}</a></td></tr>{% endfor %}</tbody></table>{% endif %}
+</div></div>
+{% endblock %}
+

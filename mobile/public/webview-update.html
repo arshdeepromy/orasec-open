@@ -1,0 +1,38 @@
+<!doctype html>
+<!--
+  Shown by Capacitor instead of the app when the phone's Android System WebView
+  is older than android.minWebViewVersion (capacitor.config.ts). Deliberately
+  plain HTML and old-style CSS: an outdated WebView can't run the app's own
+  JavaScript or styles (Android 7 emulator images ship WebView 53).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OraSec needs an update</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0B1312; color: #EEF6F4; font-family: sans-serif; }
+  .wrap { box-sizing: border-box; min-height: 100%; padding: 64px 28px 32px; text-align: center; }
+  img { width: 72px; height: 72px; border-radius: 18px; }
+  h1 { font-size: 22px; margin: 22px 0 10px; }
+  p { font-size: 15px; line-height: 1.5; color: #A9C2BD; margin: 0 0 14px; }
+  .steps { text-align: left; max-width: 360px; margin: 22px auto 0; padding: 16px 18px; background: #13201E; border: 1px solid #24413C; border-radius: 14px; }
+  .steps p { color: #EEF6F4; margin: 0 0 8px; }
+  a { color: #6FE3CE; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img src="brand-mark.png" alt="">
+  <h1>Update Android System WebView</h1>
+  <p>OraSec needs a newer version of Android System WebView, the part of Android that shows app screens.</p>
+  <div class="steps">
+    <p>1. Open the Google Play Store.</p>
+    <p>2. Search for <b>Android System WebView</b> and tap Update.</p>
+    <p>3. Close OraSec and open it again.</p>
+  </div>
+  <p style="margin-top:22px"><a href="market://details?id=com.google.android.webview">Open in Google Play</a></p>
+</div>
+</body>
+</html>
+

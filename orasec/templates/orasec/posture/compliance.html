@@ -1,0 +1,32 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}ISO 27001 Compliance | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>ISO/IEC 27001:2022</h1><div class="sub">{% trans "ISMS clauses 4–10 and the 93 Annex A controls: implementation, Statement of Applicability, evidence and automated checks from live OraSec data." %}</div></div>
+<div style="display:flex;gap:.4rem;flex-wrap:wrap">
+  <a class="btn" href="{% url 'orasec_soa_export' 'xlsx' %}"><i class="fa-solid fa-file-excel"></i> {% trans "SoA (Excel)" %}</a>
+  <a class="btn" href="{% url 'orasec_soa_export' 'csv' %}"><i class="fa-solid fa-file-csv"></i> CSV</a>
+  <button class="btn" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+  {% if can_compliance %}<form method="post" action="{% url 'orasec_compliance_evaluate' %}">{% csrf_token %}<button class="btn btn-p"><i class="fa-solid fa-rotate"></i> {% trans "Run automated checks" %}</button></form>{% endif %}
+</div></div>
+<div class="grid g4" style="margin-bottom:1rem">
+  <div class="card kpi"><div class="l">{% trans "Control coverage" %}</div><div class="v">{% widthratio summary.score 10 1 %}%</div><div class="d">{{ summary.applicable }} {% trans "applicable of" %} {{ summary.total }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Implemented" %}</div><div class="v">{{ summary.implemented }}</div><div class="d">{{ summary.in_progress }} {% trans "in progress" %} · {{ summary.not_started }} {% trans "not started" %}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Automated checks" %}</div><div class="v">{{ summary.auto_pass }}<span class="muted" style="font-size:1rem"> / {{ summary.auto_pass|add:summary.auto_warn|add:summary.auto_fail }}</span></div><div class="d">{{ summary.auto_warn }} {% trans "warning" %} · {{ summary.auto_fail }} {% trans "failing" %}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Evidence items" %}</div><div class="v">{{ summary.evidence }}</div></div>
+</div>
+<div class="tabs">
+  <a href="?" class="{% if not category %}on{% endif %}">{% trans "All" %}</a>
+  {% for c in categories %}<a href="?category={{ c }}" class="{% if category == c %}on{% endif %}">{% if c == "Clause" %}{% trans "ISMS clauses" %}{% else %}{{ c }}{% endif %}</a>{% endfor %}
+  <a href="?status=fail" class="{% if st == 'fail' %}on{% endif %}">{% trans "Failing checks" %}</a>
+  <a href="?status=not_started" class="{% if st == 'not_started' %}on{% endif %}">{% trans "Not started" %}</a>
+</div>
+<div class="card">
+<table class="t"><thead><tr><th>Ref</th><th>{% trans "Control" %}</th><th>{% trans "Theme" %}</th><th>{% trans "Applicable" %}</th><th>{% trans "Status" %}</th><th>{% trans "Automated" %}</th><th>{% trans "Owner" %}</th><th class="num">{% trans "Evidence" %}</th></tr></thead><tbody>
+{% for c in controls %}{% with i=c.implementation %}
+<tr><td class="mono">{{ c.ref }}</td><td><a class="lk" href="{% url 'orasec_control' c.id %}">{{ c.title }}</a>{% if i.auto_detail %}<div class="muted" style="font-size:.76rem">{{ i.auto_detail|truncatechars:150 }}</div>{% endif %}</td>
+<td class="muted">{{ c.category }}</td><td>{{ i.applicable|yesno:"Yes,No" }}</td><td><span class="b b-{{ i.status }}">{{ i.get_status_display }}</span></td>
+<td><span class="b b-{{ i.auto_status }}">{{ i.get_auto_status_display }}</span></td><td>{{ i.owner|default:"—" }}</td><td class="num">{{ c.n_evidence }}</td></tr>
+{% endwith %}{% endfor %}</tbody></table></div>
+{% endblock %}
+

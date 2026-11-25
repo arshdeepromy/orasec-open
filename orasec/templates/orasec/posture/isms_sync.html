@@ -1,0 +1,28 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Policy tool sync | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}
+<div class="hdr"><div><h1>{% trans "Policy tool sync" %}</h1>
+<div class="sub">{% trans "Two-way sync with the policy tool. Changes move within seconds; a full check runs nightly at 02:30. Approvals are made in OraSec." %}</div></div>
+<form method="post" class="noprint" style="display:flex;gap:.4rem">{% csrf_token %}
+<button class="btn" name="action" value="retry">{% trans "Pull changes now" %}</button>
+<button class="btn btn-p" name="action" value="full">{% trans "Run full sync now" %}</button></form></div>
+<div class="card"><table class="t"><tbody>
+<tr><th style="width:14rem">{% trans "Connector" %}</th><td>{% if conn %}{{ conn.name }} — {{ conn.base_url }}{% else %}<span class="b b-off_track">{% trans "Not configured (add a connector of kind 'Policy tool')" %}</span>{% endif %}</td></tr>
+<tr><th>{% trans "Last full sync" %}</th><td>{{ last_full.finished|default:"—" }}</td></tr>
+<tr><th>{% trans "Last event from policy tool" %}</th><td>{{ last_in|default:"—" }}</td></tr>
+<tr><th>{% trans "Linked records" %}</th><td>{% for k, v in counts.items %}<span class="b">{{ k }}: {{ v }}</span> {% endfor %}</td></tr>
+</tbody></table></div>
+<h2 style="margin-top:1rem">{% trans "Open conflicts" %}</h2>
+<div class="card"><table class="t"><thead><tr><th>{% trans "Record" %}</th><th>{% trans "Field" %}</th><th>{% trans "Type" %}</th><th>OraSec</th><th>{% trans "Policy tool" %}</th><th>{% trans "When" %}</th><th></th></tr></thead><tbody>
+{% for c in conflicts %}<tr><td>{{ c.entity }} — {{ c.label }}</td><td class="mono">{{ c.field }}</td><td>{{ c.get_kind_display }}</td><td>{{ c.orasec_value|truncatechars:80 }}</td><td>{{ c.isms_value|truncatechars:80 }}</td><td>{{ c.created|date:"j M H:i" }}</td>
+<td><form method="post" action="{% url 'orasec_isms_resolve' c.id %}" style="display:flex;gap:.3rem">{% csrf_token %}
+<button class="btn" name="choice" value="orasec">{% trans "Keep OraSec" %}</button>{% if c.kind == "field" %}<button class="btn" name="choice" value="isms">{% trans "Use policy tool" %}</button>{% endif %}</form></td></tr>
+{% empty %}<tr><td colspan="7" class="empty">{% trans "No open conflicts." %}</td></tr>{% endfor %}</tbody></table></div>
+<h2 style="margin-top:1rem">{% trans "Recent sync runs" %}</h2>
+<div class="card"><table class="t"><thead><tr><th>{% trans "Started" %}</th><th>{% trans "Type" %}</th><th>{% trans "Result" %}</th><th>{% trans "Details" %}</th></tr></thead><tbody>
+{% for r in runs %}<tr><td>{{ r.started|date:"j M H:i:s" }}</td><td>{{ r.get_kind_display }}</td><td>{% if r.ok %}<span class="b b-met">OK</span>{% elif r.finished %}<span class="b b-off_track">{% trans "Failed" %}</span>{% else %}<span class="b">{% trans "Running" %}</span>{% endif %}</td>
+<td class="mono" style="font-size:.8rem">{% if r.error %}{{ r.error|truncatechars:200 }}{% else %}{{ r.stats }}{% endif %}</td></tr>
+{% empty %}<tr><td colspan="4" class="empty">{% trans "No runs yet." %}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

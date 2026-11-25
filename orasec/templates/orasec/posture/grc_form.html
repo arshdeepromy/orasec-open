@@ -1,0 +1,10 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{{ title }} | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{{ title }}</h1>{% if sub %}<div class="sub">{{ sub }}</div>{% endif %}</div>
+<a class="btn" href="{% url back %}">← {% trans "Back" %}</a></div>
+<form method="post" class="card f" style="max-width:860px"{% if multipart %} enctype="multipart/form-data"{% endif %}>{% csrf_token %}
+{{ form.non_field_errors }}{{ form.as_p }}<button class="btn btn-p">{% trans "Save" %}</button></form>
+{% endblock %}
+

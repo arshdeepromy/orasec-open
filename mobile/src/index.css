@@ -1,0 +1,1256 @@
+@import 'tailwindcss';
+/* Konsta UI theme (iOS + Material component styles) — must precede other statements */
+/* NOTE: import the top-level theme, NOT 'konsta/react/theme.css' — that file
+   places `@source` before its own `@import '../theme.css'`, which makes the
+   import invalid CSS and silently drops Konsta's entire theme (colors,
+   ripples, hairlines, safe-areas). The react-component @source scan is done
+   below instead. */
+@import 'konsta/theme.css';
+
+/* Reference tailwind.config.js for theme extensions and content paths */
+@config '../tailwind.config.js';
+
+/* Konsta v5 components emit Tailwind utilities (bg-md-*, hairline-*,
+   touch-ripple-*, translate/duration helpers). node_modules is excluded from
+   Tailwind v4's automatic source detection, so scan the library explicitly —
+   without this every Konsta component renders unstyled. */
+@source '../node_modules/konsta/react';
+@source '../node_modules/konsta/shared';
+
+/* Class-based dark mode (ThemeContext toggles .dark on <html>) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   OraSec Mobile — Design System
+   Shared with the publisher's invoicing app so both read as one family:
+   ported from the invoicing app's index.css (itself from the
+   design handoff ds-mobile.css), plus the OraSec signature font and
+   recipient palette.
+   IBM Plex Sans UI · IBM Plex Mono numerals · #2F62F0 accent.
+   ============================================================ */
+
+:root {
+  --accent: #2F62F0;
+  --color-primary: #2F62F0;
+  --color-secondary: #1E40AF;
+  --accent-press: color-mix(in srgb, var(--accent) 84%, #000);
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-fg: var(--accent);
+
+  --ink: #0B1220;
+  --canvas: #F4F6F9;
+  --card: #ffffff;
+  --card-2: #F7F9FC;
+  --border: #E7EBF1;
+  --border-strong: #D6DCE5;
+  --text: #111722;
+  --muted: #687283;
+  --muted-2: #98A1B0;
+
+  --ok: #1F8A5B;        --ok-soft: color-mix(in srgb, #1F8A5B 13%, transparent);
+  --warn: #B5740F;      --warn-soft: color-mix(in srgb, #B5740F 14%, transparent);
+  --danger: #C8412F;    --danger-soft: color-mix(in srgb, #C8412F 12%, transparent);
+  --purple: #6D5AE6;    --purple-soft: color-mix(in srgb, #6D5AE6 13%, transparent);
+
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  /* OraSec: rendered signatures only (signature pad "type" mode, placed
+     signature fields). */
+  --signature: 'Caveat', 'Segoe Script', cursive;
+
+  /* OraSec recipient palette (signer colour-coding: avatars, field chips,
+     editor assignment). Cycle of 5 — DESIGN_TOKENS.md §1. */
+  --r1: #2F62F0; --r1-soft: rgba(47,98,240,.13);
+  --r2: #1F8A5B; --r2-soft: rgba(31,138,91,.14);
+  --r3: #B5740F; --r3-soft: rgba(181,116,15,.15);
+  --r4: #6D5AE6; --r4-soft: rgba(109,90,230,.14);
+  --r5: #C8412F; --r5-soft: rgba(200,65,47,.13);
+
+  --r-card: 16px;
+  --r-ctl: 12px;
+  --r-chip: 9px;
+
+  --shadow-card: 0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.05);
+  --shadow-pop: 0 18px 44px -12px rgba(11,18,32,0.34), 0 4px 10px rgba(11,18,32,0.10);
+  --shadow-fab: 0 8px 22px -6px color-mix(in srgb, var(--accent) 60%, transparent);
+
+  --pad: 16px;
+  --gap: 13px;
+  --row-pad-y: 13px;
+  --card-pad: 16px;
+
+  --nav-h: 52px;
+  --tab-h: 60px;
+
+  /* Tablet content column.
+     The app is phone-first: every screen is a single column sized by the
+     viewport. On a tablet that viewport is 800-1280dp wide, which turns a
+     login field into a 1200px slot and a two-column card grid into two very
+     wide cards. Cap the column at a readable measure and centre it; the
+     gutters keep the canvas colour so it reads as a deliberate layout rather
+     than a phone app stretched. Phones are far below this, so it is inert
+     there. */
+  --content-max: 960px; /* tablets: keep lines and lists readable */
+  --auth-max: 560px;
+  --auth-card: 460px;
+  --page-max: 880px;
+  --sheet-max: 680px;
+  /* iOS reports the bars through env(); Android reports only the display
+     cutout there, so MainActivity mirrors the real window insets into
+     --android-inset-*. max() takes whichever platform actually knows, and
+     neither can double-count because the other side is 0/unset. */
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--android-inset-top, 0px));
+  --safe-bot: max(env(safe-area-inset-bottom, 0px), var(--android-inset-bottom, 0px));
+}
+
+.dark {
+  --ink: #060B14;
+  --canvas: #0A111E;
+  --card: #131C2C;
+  --card-2: #18243A;
+  --border: rgba(255,255,255,0.075);
+  --border-strong: rgba(255,255,255,0.15);
+  --text: #EAEFF7;
+  --muted: #93A0B5;
+  --muted-2: #677387;
+
+  --ok-soft: color-mix(in srgb, #34c98a 17%, transparent);
+  --warn-soft: color-mix(in srgb, #e6a84a 17%, transparent);
+  --danger-soft: color-mix(in srgb, #ef6a59 17%, transparent);
+  --purple-soft: color-mix(in srgb, #9b8bff 17%, transparent);
+  --ok: #43cf93; --warn: #ecb05b; --danger: #f47a6a; --purple: #a896ff;
+  --r1: #6F92FF; --r1-soft: rgba(111,146,255,.18);
+  --r2: #43CF93; --r2-soft: rgba(67,207,147,.17);
+  --r3: #ECB05B; --r3-soft: rgba(236,176,91,.17);
+  --r4: #A896FF; --r4-soft: rgba(168,150,255,.18);
+  --r5: #F47A6A; --r5-soft: rgba(244,122,106,.17);
+  --accent-fg: color-mix(in srgb, var(--accent) 55%, #fff);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-pop: 0 18px 44px -12px rgba(0,0,0,0.6), 0 4px 10px rgba(0,0,0,0.4);
+}
+
+/* Element-level resets MUST live in @layer base: unlayered CSS outranks every
+   @layer, so a bare `button { border:none; background:none }` would override
+   Tailwind's utility classes (bg-*, border, text-*) on every Konsta button
+   and render them as unstyled text. */
+@layer base {
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html {
+    touch-action: manipulation;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    background: var(--canvas);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+  }
+
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  a { color: inherit; text-decoration: none; }
+  h1,h2,h3,h4 { margin: 0; letter-spacing: -0.02em; }
+  p { margin: 0; }
+
+  /* Prevent text selection on interactive elements for native feel */
+  button, [role='button'], [role='tab'] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+.mono { font-family: var(--mono); font-feature-settings: "tnum" 1; }
+
+.scroll-container { -webkit-overflow-scrolling: touch; overflow-y: auto; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* ============ STATUS-BAR SCRIM ============
+   The app draws edge to edge, so on screens without a sticky navbar (large-
+   title pages such as Settings or the dashboard) scrolled content ran under
+   the clock and status icons. A fixed strip the height of the status bar, in
+   the canvas colour, keeps them legible. It sits just under .navbar (z 5), so
+   screens with a navbar look exactly as before; it never takes touches. */
+body::after {
+  content: ''; position: fixed; top: 0; left: 0; right: 0;
+  height: var(--safe-top); z-index: 4; pointer-events: none;
+  background: color-mix(in srgb, var(--canvas) 90%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+
+/* ============ NAVBAR ============ */
+.navbar {
+  min-height: var(--nav-h); flex-shrink: 0;
+  display: flex; align-items: center; gap: 6px;
+  padding: var(--safe-top) 8px 0;
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 5;
+}
+.navbar.lg { padding-bottom: 10px; flex-direction: column; align-items: stretch; }
+.nav-row { height: var(--nav-h); display: flex; align-items: center; gap: 6px; width: 100%; }
+.nav-title { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-title .sub { display: block; font-size: 11.5px; font-weight: 400; color: var(--muted); }
+.nav-title.lead { text-align: left; padding-left: 8px; }
+.nav-big { padding: 2px 16px 4px; }
+.nav-big h1 { font-size: 27px; font-weight: 700; letter-spacing: -0.03em; }
+.nav-big .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.nav-btn {
+  width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+  display: grid; place-items: center; color: var(--text);
+}
+.nav-btn:active { background: var(--accent-soft); }
+.nav-btn svg { width: 22px; height: 22px; }
+.nav-btn.txt { width: auto; padding: 0 6px; gap: 3px; color: var(--accent); font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; }
+.nav-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+
+/* screen content scroll area */
+.screen { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; }
+.screen::-webkit-scrollbar { width: 0; height: 0; }
+.pad { padding: var(--pad); }
+.pad-x { padding-left: var(--pad); padding-right: var(--pad); }
+.stack { display: flex; flex-direction: column; gap: var(--gap); }
+.scroll-pad { padding-bottom: 92px; }
+
+/* ============ TAB BAR ============ */
+.tabbar {
+  flex-shrink: 0; display: flex; align-items: stretch;
+  height: calc(var(--tab-h) + var(--safe-bot, 0px));
+  padding-bottom: var(--safe-bot, 0px);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  backdrop-filter: saturate(1.4) blur(16px);
+  -webkit-backdrop-filter: saturate(1.4) blur(16px);
+  border-top: 1px solid var(--border);
+  position: relative; z-index: 6;
+}
+.tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; color: var(--muted-2); position: relative;
+}
+.tab svg { width: 24px; height: 24px; }
+.tab .tl { font-size: 10.5px; font-weight: 600; letter-spacing: 0.01em; }
+.tab.on { color: var(--accent); }
+.tab .tdot { position: absolute; top: 7px; right: calc(50% - 16px); width: 8px; height: 8px; border-radius: 50%; background: var(--danger); border: 2px solid var(--card); }
+.tab-ico { display: grid; place-items: center; width: 56px; height: 30px; border-radius: 16px; }
+.tab.on .tab-ico { background: var(--accent-soft); }
+
+/* ============ CARDS ============ */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-card); }
+.card-pad { padding: var(--card-pad); }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px var(--card-pad); border-bottom: 1px solid var(--border); }
+.card-head h2 { font-size: 14.5px; font-weight: 600; white-space: nowrap; }
+.card-head > * { white-space: nowrap; flex-shrink: 0; }
+.card-head .link { font-size: 13px; font-weight: 600; color: var(--accent); }
+.section-label { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.11em; text-transform: uppercase; color: var(--muted-2); margin: 2px 2px 11px; }
+
+/* ============ KPI ============ */
+.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+.kpi { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-card); padding: 14px; box-shadow: var(--shadow-card); }
+.kpi .ktop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; }
+.kpi .klabel { font-size: 12px; font-weight: 500; color: var(--muted); }
+.kpi .ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; }
+.kpi .ico svg { width: 16px; height: 16px; }
+.kpi .kval { font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
+.kpi .kval .c { color: var(--muted-2); font-size: 14px; }
+.kpi .kdelta { display: inline-flex; align-items: center; gap: 3px; margin-top: 9px; font-family: var(--mono); font-size: 11.5px; font-weight: 500; }
+.kpi .kdelta.up { color: var(--ok); } .kpi .kdelta.down { color: var(--danger); }
+.kpi .kdelta svg { width: 13px; height: 13px; }
+.ico.blue { background: var(--accent-soft); color: var(--accent-fg); }
+.ico.green { background: var(--ok-soft); color: var(--ok); }
+.ico.amber { background: var(--warn-soft); color: var(--warn); }
+.ico.red { background: var(--danger-soft); color: var(--danger); }
+.ico.purple { background: var(--purple-soft); color: var(--purple); }
+
+/* ============ LIST ============ */
+.list { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; box-shadow: var(--shadow-card); }
+.list.flush { border-radius: 0; border-left: none; border-right: none; box-shadow: none; }
+.li { display: flex; align-items: center; gap: 12px; padding: var(--row-pad-y) var(--card-pad); border-bottom: 1px solid var(--border); position: relative; width: 100%; text-align: left; }
+.li:last-child { border-bottom: none; }
+.li:active { background: var(--card-2); }
+.li .av { width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+.li .av.tint { background: var(--accent-soft); color: var(--accent-fg); }
+.li .av.neutral { background: var(--card-2); border: 1px solid var(--border); color: var(--muted); }
+.li .av svg { width: 19px; height: 19px; }
+.li .body { min-width: 0; flex: 1; display: block; text-align: left; }
+.li .t, .li .s { display: block; }
+.li .t { font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.li .s { font-size: 12.5px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.li .end { margin-left: auto; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.li .amt { font-family: var(--mono); font-weight: 600; font-size: 14px; font-feature-settings: "tnum" 1; }
+.li .chev { color: var(--muted-2); flex-shrink: 0; }
+.li .chev svg { width: 19px; height: 19px; display: block; }
+
+/* ============ BADGES / CHIPS ============ */
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; letter-spacing: 0.01em; }
+.badge .bd { width: 6px; height: 6px; border-radius: 50%; }
+.badge.paid, .badge.active, .badge.completed, .badge.success, .badge.approved { background: var(--ok-soft); color: var(--ok); }
+.badge.paid .bd, .badge.success .bd, .badge.active .bd, .badge.completed .bd, .badge.approved .bd { background: var(--ok); }
+.badge.sent, .badge.info, .badge.inprogress { background: var(--accent-soft); color: var(--accent-fg); }
+.badge.sent .bd, .badge.info .bd, .badge.inprogress .bd { background: var(--accent); }
+.badge.overdue, .badge.danger, .badge.failed, .badge.expired { background: var(--danger-soft); color: var(--danger); }
+.badge.overdue .bd, .badge.danger .bd, .badge.failed .bd, .badge.expired .bd { background: var(--danger); }
+.badge.draft, .badge.neutral, .badge.cancelled { background: var(--card-2); color: var(--muted); border: 1px solid var(--border); }
+.badge.draft .bd, .badge.neutral .bd, .badge.cancelled .bd { background: var(--muted-2); }
+.badge.pending, .badge.warn, .badge.expiring { background: var(--warn-soft); color: var(--warn); }
+.badge.pending .bd, .badge.warn .bd, .badge.expiring .bd { background: var(--warn); }
+
+.chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0; scrollbar-width: none; -ms-overflow-style: none; }
+.chips::-webkit-scrollbar { height: 0; width: 0; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 20px; background: var(--card); border: 1px solid var(--border); color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-on, #fff); }
+.chip .n { font-family: var(--mono); font-size: 11px; opacity: .75; }
+
+/* ============ BUTTONS ============ */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 50px; padding: 0 18px; border-radius: var(--r-ctl); font-size: 15px; font-weight: 600; width: 100%; transition: transform .05s; }
+.btn:active { transform: scale(0.985); }
+.btn:disabled { opacity: .5; }
+.btn svg { width: 19px; height: 19px; }
+.btn-primary { background: var(--accent); color: #fff; box-shadow: 0 1px 2px rgba(16,24,40,.18), inset 0 1px 0 rgba(255,255,255,.16); }
+.btn-primary:active { background: var(--accent-press); }
+.btn-ghost { background: var(--card); color: var(--text); border: 1px solid var(--border-strong); }
+.btn-ghost:active { background: var(--card-2); }
+.btn-danger { background: var(--danger-soft); color: var(--danger); }
+.btn-sm { height: 40px; font-size: 13.5px; border-radius: 10px; padding: 0 14px; width: auto; }
+.btn-row { display: flex; gap: 10px; }
+.btn-row .btn { flex: 1; }
+
+/* FAB */
+.fab {
+  position: fixed; right: 18px; bottom: calc(var(--tab-h) + var(--safe-bot, 0px) + 18px);
+  height: 52px; padding: 0 20px; border-radius: 26px;
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--accent); color: #fff; font-weight: 600; font-size: 15px;
+  box-shadow: var(--shadow-fab); z-index: 7;
+}
+.fab:active { transform: scale(0.96); }
+.fab svg { width: 21px; height: 21px; }
+.fab.round { padding: 0; width: 56px; height: 56px; justify-content: center; }
+
+/* ============ FORMS ============ */
+.field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
+.field label { font-size: 13px; font-weight: 600; color: var(--text); }
+.field label .opt { color: var(--muted-2); font-weight: 400; }
+.field .hint { font-size: 12px; color: var(--muted); }
+.field .err-msg { font-size: 12px; color: var(--danger); }
+.input, .textarea, .select {
+  width: 100%; height: 50px; padding: 0 14px; font-size: 15px; color: var(--text);
+  background: var(--card); border: 1px solid var(--border-strong); border-radius: var(--r-ctl);
+  outline: none; transition: border-color .14s, box-shadow .14s; font-family: inherit;
+}
+.input::placeholder, .textarea::placeholder { color: var(--muted-2); }
+.input:focus, .textarea:focus, .select:focus { border-color: var(--accent); box-shadow: 0 0 0 3.5px var(--accent-soft); }
+.input.error, .textarea.error, .select.error { border-color: var(--danger); }
+.textarea { height: auto; min-height: 96px; padding: 13px 14px; resize: none; line-height: 1.5; }
+.select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2398A1B0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 40px; }
+.input-group { display: flex; align-items: center; background: var(--card); border: 1px solid var(--border-strong); border-radius: var(--r-ctl); overflow: hidden; }
+.input-group:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3.5px var(--accent-soft); }
+.input-group .pre { padding: 0 13px; color: var(--muted); font-family: var(--mono); border-right: 1px solid var(--border); align-self: stretch; display: flex; align-items: center; }
+.input-group input { border: none; outline: none; height: 50px; padding: 0 14px; font-size: 15px; width: 100%; background: none; color: var(--text); font-family: inherit; }
+
+/* search */
+.searchbar { display: flex; align-items: center; gap: 9px; height: 42px; padding: 0 13px; background: var(--card-2); border: 1px solid var(--border); border-radius: 12px; color: var(--muted-2); }
+.searchbar svg { width: 18px; height: 18px; flex-shrink: 0; }
+.searchbar input { border: none; outline: none; background: none; font-size: 15px; color: var(--text); width: 100%; font-family: inherit; }
+.searchbar input::placeholder { color: var(--muted-2); }
+
+/* segmented */
+.seg { display: inline-flex; background: var(--card-2); border: 1px solid var(--border); border-radius: 11px; padding: 3px; gap: 2px; width: 100%; }
+.seg button { flex: 1; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--muted); padding: 8px 6px; }
+.seg button.on { background: var(--card); color: var(--text); box-shadow: var(--shadow-card); }
+/* Compact segmented control (e.g. the Incl/Excl GST chip in a card header). */
+.seg.seg-sm { width: auto; padding: 2px; border-radius: 9px; }
+.seg.seg-sm button { flex: 0 0 auto; font-size: 12px; padding: 3px 9px; border-radius: 7px; white-space: nowrap; }
+.seg.seg-sm button.on { color: var(--accent); }
+
+/* toggle */
+.toggle { width: 46px; height: 28px; border-radius: 20px; background: var(--border-strong); position: relative; flex-shrink: 0; transition: background .18s; }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .18s; }
+.toggle.on { background: var(--accent); } .toggle.on::after { transform: translateX(18px); }
+
+/* stepper */
+.stepper { display: inline-flex; align-items: center; gap: 8px; }
+.stepper button { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--card); display: grid; place-items: center; }
+.stepper button svg { width: 16px; height: 16px; }
+.stepper .val { font-family: var(--mono); font-size: 15px; font-weight: 600; min-width: 34px; text-align: center; }
+
+/* ============ MISC ============ */
+.meta-row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.meta-row:last-child { border-bottom: none; }
+.meta-row .k { color: var(--muted); }
+.meta-row .v { font-weight: 600; text-align: right; }
+.meta-row .v.mono { font-family: var(--mono); font-feature-settings: "tnum" 1; }
+.divider { height: 1px; background: var(--border); margin: 0; border: none; }
+
+.amount-hero { text-align: center; padding: 8px 0 4px; }
+.amount-hero .lbl { font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
+.amount-hero .val { font-family: var(--mono); font-size: 38px; font-weight: 600; letter-spacing: -0.03em; font-feature-settings: "tnum" 1; }
+
+.timeline { position: relative; padding-left: 26px; }
+.timeline::before { content: ""; position: absolute; left: 6px; top: 5px; bottom: 5px; width: 2px; background: var(--border); }
+.tl-item { position: relative; padding-bottom: 18px; }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-item::before { content: ""; position: absolute; left: -23px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--card); border: 2px solid var(--border-strong); }
+.tl-item.on::before { border-color: var(--accent); background: var(--accent); }
+.tl-item .t { font-size: 13.5px; font-weight: 600; }
+.tl-item .s { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.tl-item .tm { font-family: var(--mono); font-size: 11px; color: var(--muted-2); margin-top: 2px; }
+
+.progress { height: 8px; border-radius: 20px; background: var(--border); overflow: hidden; }
+.progress > i { display: block; height: 100%; border-radius: 20px; background: var(--accent); }
+
+.empty { text-align: center; padding: 48px 24px; }
+.empty .eico { width: 60px; height: 60px; border-radius: 18px; background: var(--card-2); display: grid; place-items: center; margin: 0 auto 14px; color: var(--muted-2); }
+.empty .eico svg { width: 28px; height: 28px; }
+.empty h3 { font-size: 16px; font-weight: 700; }
+.empty p { color: var(--muted); font-size: 13.5px; margin: 6px 0 0; }
+
+/* bottom sheet / modal */
+.sheet-scrim { position: fixed; inset: 0; background: rgba(8,13,22,0.5); z-index: 20; opacity: 0; pointer-events: none; transition: opacity .26s; }
+.sheet-scrim.open { opacity: 1; pointer-events: auto; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 21;
+  background: var(--card); border-radius: 22px 22px 0 0;
+  transform: translateY(100%); transition: transform .3s cubic-bezier(.32,.72,0,1);
+  max-height: 88%; display: flex; flex-direction: column;
+  padding-bottom: var(--safe-bot, 0px);
+  box-shadow: var(--shadow-pop);
+}
+.sheet.open { transform: translateY(0); }
+.sheet .grab { width: 38px; height: 5px; border-radius: 3px; background: var(--border-strong); margin: 10px auto 4px; flex-shrink: 0; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 18px 12px; }
+.sheet-head h3 { font-size: 18px; font-weight: 700; }
+.sheet-body { overflow-y: auto; padding: 0 18px 20px; }
+.sg-sheet-foot { flex-shrink: 0; padding: 12px 18px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--card); border-radius: 0; }
+
+/* module grid (More) */
+.mod-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.mod { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 13px 4px; border-radius: 14px; text-align: center; }
+.mod:active { background: var(--card-2); }
+.mod .micon { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: var(--card); border: 1px solid var(--border); color: var(--accent-fg); box-shadow: var(--shadow-card); }
+.mod .micon svg { width: 22px; height: 22px; }
+.mod .ml { font-size: 11px; font-weight: 600; color: var(--text); line-height: 1.2; }
+
+/* avatar circle */
+.acircle { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 15px; flex-shrink: 0; }
+
+/* helpers */
+.row { display: flex; align-items: center; gap: 10px; }
+.between { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.muted { color: var(--muted); }
+.mt { margin-top: var(--gap); }
+.grow { flex: 1; }
+
+/* toast */
+.toast {
+  position: fixed; left: 50%; bottom: calc(var(--safe-bot, 0px) + 88px); transform: translate(-50%, 12px);
+  z-index: 60; display: flex; align-items: center; gap: 9px; max-width: 80%;
+  background: var(--ink); color: #fff; font-size: 13.5px; font-weight: 600;
+  padding: 11px 16px; border-radius: 13px; box-shadow: var(--shadow-pop);
+  opacity: 0; pointer-events: none; transition: opacity .24s, transform .24s;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 28%, transparent); }
+.toast .dot.err { background: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 28%, transparent); }
+.dark .toast { background: #0a1426; border: 1px solid var(--border-strong); }
+
+.select-pop {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 30;
+  background: var(--card); border: 1px solid var(--border-strong); border-radius: var(--r-ctl);
+  box-shadow: var(--shadow-pop); padding: 5px; max-height: 220px; overflow-y: auto;
+}
+.select-opt { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 11px 12px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--text); }
+.select-opt:active { background: var(--card-2); }
+.select-opt.on { color: var(--accent); }
+
+.upload-box { border: 1.5px dashed var(--border-strong); border-radius: 14px; padding: 26px; text-align: center; color: var(--muted-2); display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; background: none; }
+.upload-box:active { background: var(--card-2); }
+.upload-box svg { width: 24px; height: 24px; }
+.upload-box .ut { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.upload-box .uh { font-size: 12.5px; color: var(--muted); }
+
+/* skeleton */
+.sk { display: inline-block; border-radius: 7px; background: linear-gradient(90deg, var(--card-2) 25%, color-mix(in srgb, var(--card-2) 45%, var(--border)) 50%, var(--card-2) 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.sk-av { width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0; }
+.sk-line { height: 12px; } .sk-line.sm { height: 10px; }
+.body .sk-line { display: block; } .body .sk-line + .sk-line { margin-top: 7px; }
+
+/* empty / error / restricted states */
+.state { text-align: center; padding: 60px 32px; display: flex; flex-direction: column; align-items: center; }
+.state-ico { width: 60px; height: 60px; border-radius: 18px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-fg); margin-bottom: 16px; }
+.state-ico svg { width: 26px; height: 26px; }
+.state-ico.err { background: var(--danger-soft); color: var(--danger); }
+.state-ico.neutral { background: var(--card-2); color: var(--muted-2); }
+.state h3 { font-size: 17px; font-weight: 700; }
+.state p { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin: 7px 0 0; max-width: 260px; }
+.state .btn { margin-top: 24px; width: auto; }
+
+/* pill stat */
+.pill-stat { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 9px; background: var(--card-2); border: 1px solid var(--border); font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.pill-stat svg { width: 14px; height: 14px; }
+
+/* offline pill */
+.offline-pill { position: fixed; top: calc(var(--safe-top) + 8px); left: 50%; transform: translateX(-50%); z-index: 50; display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 15px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 600; box-shadow: var(--shadow-pop); }
+.offline-pill .odot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
+
+/* spinner */
+@keyframes oi-spin { to { transform: rotate(360deg); } }
+.spinner { display: inline-block; border-radius: 50%; border: 2.5px solid var(--accent-soft); border-top-color: var(--accent); animation: oi-spin .7s linear infinite; }
+
+/* KonstaTabbar fixed positioning helper (was inline in old css usage) */
+/* Tab bar sits in the shell's flex column (not fixed) so it can never cover
+   page content. The scrolling area above it is sized by flex, which means
+   `.k-page` (absolute, h-full) resolves against <main> and stops short of
+   the bar instead of running underneath it. */
+.konsta-tabbar-fixed { position: relative; flex: 0 0 auto; width: 100%; }
+
+/* Horizontal chip / tab rows.
+   These scroll, but a chip sliced flush at the viewport edge reads as a
+   rendering bug rather than "there is more this way". Fade the trailing edge
+   and hide the scrollbar so the affordance is obvious on touch. */
+.scroll-fade-x {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+}
+.scroll-fade-x::-webkit-scrollbar { display: none; }
+/* Segmented tab bars.
+   Konsta splits the width equally between segments, so a longer label either
+   clips ("Suppliers" in a 68px slot) or wraps to two lines and leaves the row
+   uneven. Let the segments size to their text and scroll instead. */
+.k-segmented.segmented-scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  justify-content: flex-start;
+}
+.k-segmented.segmented-scroll::-webkit-scrollbar { display: none; }
+/* Equal-width segments (konsta strong mode positions its sliding highlight
+   assuming equal widths); flex 0 0 auto + w-full made every button as wide
+   as the whole control, leaving only the first tab visible. */
+.k-segmented.segmented-scroll > * {
+  flex: 1 1 0%;
+  min-width: 0;
+  white-space: nowrap;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+/* Five segments on a phone leave ~72px each: a size down so "Suppliers"
+   (Inventory) fits without clipping. */
+@media (max-width: 430px) {
+  .k-segmented.segmented-scroll > *,
+  .k-segmented.segmented-scroll > * * {
+    font-size: 13px !important;
+    letter-spacing: -0.01em;
+  }
+  .k-segmented.segmented-scroll > * { padding-left: 3px; padding-right: 3px; }
+}
+
+/* Native form controls (checkboxes, radios, date pickers, scrollbars) are
+   painted by the browser, not by our classes — without `color-scheme` they keep
+   their light-mode chrome, which is why the "Remember me" box rendered as a
+   solid white block on the dark login screen. `accent-color` then pulls them
+   onto the brand colour in both themes. */
+:root {
+  color-scheme: light dark;
+  accent-color: var(--primary, #2563eb);
+}
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+
+/* ============================================================
+   KONSTA SKIN — map Konsta UI components onto the design tokens
+   so every existing screen adopts the OraFlows design system.
+   ============================================================ */
+
+.k-app, .k-page {
+  background: var(--canvas) !important;
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+/* Navbar: card surface + hairline, title typography */
+.k-navbar > div[class*="bg-md-"] {
+  background: color-mix(in srgb, var(--card) 92%, transparent) !important;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: saturate(1.4) blur(14px);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+}
+.k-navbar { color: var(--text) !important; }
+.k-navbar .text-\[22px\] { font-weight: 700; letter-spacing: -0.02em; font-size: 17px; }
+.k-navbar .text-\[28px\] { font-weight: 700; letter-spacing: -0.03em; font-size: 27px; }
+
+/* Tabbar: card surface + hairline; active accent pill */
+.k-toolbar > div[class*="bg-md-"] {
+  background: color-mix(in srgb, var(--card) 92%, transparent) !important;
+  border-top: 1px solid var(--border);
+  backdrop-filter: saturate(1.4) blur(16px);
+  -webkit-backdrop-filter: saturate(1.4) blur(16px);
+}
+.k-toolbar .k-link { color: var(--muted-2); }
+.k-toolbar .k-tabbar-link-active { color: var(--accent); }
+.k-toolbar .k-tabbar-link-active [class*="on-secondary-container"] { color: var(--accent) !important; }
+.k-toolbar [class*="bg-md-light-secondary-container"],
+.k-toolbar [class*="bg-md-dark-secondary-container"] {
+  background: var(--accent-soft) !important;
+}
+
+/* Cards */
+.k-card {
+  background: var(--card) !important;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card) !important;
+  box-shadow: var(--shadow-card);
+  color: var(--text) !important;
+}
+
+/* Block titles → section labels */
+.k-block-title {
+  font-family: var(--mono);
+  font-size: 11px !important;
+  font-weight: 500;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--muted-2) !important;
+  margin-left: max(16px, env(safe-area-inset-left)) !important;
+  margin-right: max(16px, env(safe-area-inset-right)) !important;
+}
+
+/* Lists */
+.k-list {
+  background: transparent;
+}
+/* Konsta's List is full-bleed unless `inset` is passed, and no screen passes it,
+   so the rounded card that `.k-list ul` becomes below was being clipped flush
+   against both screen edges. Inset every non-nested list to the page gutter and
+   drop the 32px block margin Konsta adds (my-8) to the rhythm the design uses. */
+.k-list:not([class*="ml-safe"]) {
+  margin-left: max(var(--pad), env(safe-area-inset-left));
+  margin-right: max(var(--pad), env(safe-area-inset-right));
+}
+.k-list { margin-top: 12px; margin-bottom: 8px; }
+/* A Block already pads to the gutter; a list inside one must not inset twice. */
+.k-block > .k-list, .k-block > * > .k-list { margin-left: 0; margin-right: 0; }
+/* Most detail screens stack these in a `flex-col gap-4`, where margins do not
+   collapse and simply add to the gap, so keep the bottoms small. */
+.k-card:not([class*="mb-"]):not([class*="m-0"]) { margin-bottom: 8px; }
+.k-list.hairline-t::before, .k-list.hairline-b::after { display: none; }
+/* Konsta's BlockTitle pulls the next list up with -mb-6, sized for the 32px
+   list margin removed above. Give the label its own rhythm instead. */
+.k-block-title { margin-top: 12px !important; margin-bottom: 8px !important; }
+.k-block-title + .k-list, .k-block-title + .k-block, .k-block-title + .k-card { margin-top: 0; }
+/* A section label that is also a collapse toggle is a <button>, and the UA
+   stylesheet resets text-transform/font on buttons. */
+.k-block-title button { font: inherit; text-transform: inherit; letter-spacing: inherit; color: inherit; }
+.k-list ul,
+.k-list-group ul {
+  background: var(--card) !important;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+.k-list-item a, .k-list-item > div { color: var(--text); }
+.k-list-item li, .k-list-item { background: transparent; }
+.k-list li + li a, .k-list li + li > div { border-top: 1px solid var(--border); }
+.k-list [class*="on-surface-variant"] { color: var(--muted) !important; }
+
+/* Buttons */
+.k-button {
+  border-radius: var(--r-ctl) !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+/* `[class*="bg-primary"]` also matched the `active:bg-primary/15` utility that
+   Konsta puts on every OUTLINE button, so an outline button in any colour but
+   the accent (e.g. a red "Cancel booking") rendered as a solid blue fill. */
+.k-button[class*="bg-primary"]:not([class*="bg-transparent"]), .k-button.k-button-fill {
+  background: var(--accent) !important;
+  color: #fff !important;
+  box-shadow: 0 1px 2px rgba(16,24,40,.18), inset 0 1px 0 rgba(255,255,255,.16);
+}
+.k-button.k-button-outline, .k-button[class*="border-primary"] {
+  border-color: var(--border-strong) !important;
+  color: var(--text) !important;
+  background: var(--card) !important;
+}
+.k-button.k-button-clear { color: var(--accent) !important; }
+
+/* Konsta 5's iOS 26 "liquid glass" circles behind navbar buttons and the
+   searchbar carry a stack of inset highlights that reads as a heavy grey blob
+   on the flat canvas. Keep the shape, flatten the surface. */
+.k-navbar [class*="bg-ios-light-glass"],
+.k-navbar [class*="bg-ios-dark-glass"],
+.k-searchbar [class*="bg-ios-light-glass"],
+.k-searchbar [class*="bg-ios-dark-glass"] {
+  background: var(--card-2) !important;
+  box-shadow: none !important;
+  border: 1px solid var(--border);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.k-navbar [class*="bg-ios-light-glass"] .k-link,
+.k-navbar [class*="bg-ios-dark-glass"] .k-link { color: var(--accent); }
+.k-searchbar input::placeholder { color: var(--muted-2); }
+
+/* Konsta's `small` button is 28px tall — under the 44pt tap target and it
+   renders a full-width outline as a hairline. Lift it to a tappable height;
+   screens that want a genuinely compact control pass their own !h-*. */
+.k-button.h-7:not([class*="!h-"]), .k-button.h-8:not([class*="!h-"]) { height: 40px; font-size: 15px; }
+.k-button[class*="h-8.5"]:not([class*="!h-"]) { height: 44px; }
+
+/* Chips */
+.k-chip {
+  background: var(--card) !important;
+  border: 1px solid var(--border);
+  color: var(--muted) !important;
+  font-weight: 600;
+}
+.k-chip[class*="bg-primary"] { background: var(--accent) !important; border-color: var(--accent); color: #fff !important; }
+
+/* Sheets / popovers / dialogs */
+.k-sheet, .k-popover, .k-dialog {
+  background: var(--card) !important;
+  color: var(--text) !important;
+  box-shadow: var(--shadow-pop);
+}
+.k-sheet { border-radius: 22px 22px 0 0 !important; }
+
+/* Badges keep semantic colours via StatusBadge component; neutral default */
+.k-badge { font-weight: 600; }
+
+/* Text colour utilities remap */
+.k-page [class*="text-md-light-on-surface-variant"],
+.k-page [class*="text-md-dark-on-surface-variant"] { color: var(--muted) !important; }
+.k-page [class*="text-md-light-on-surface"],
+.k-page [class*="text-md-dark-on-surface"] { color: var(--text); }
+
+/* Surface utilities remap (cards, sheets, bars rendered via bg-md-*) */
+.k-page [class*="bg-md-light-surface-1"], .k-page [class*="bg-md-dark-surface-1"] { background: var(--card) !important; }
+.k-page [class*="bg-md-light-surface-2"], .k-page [class*="bg-md-dark-surface-2"] { background: var(--card-2) !important; }
+.k-page [class*="bg-md-light-surface-3"], .k-page [class*="bg-md-dark-surface-3"] { background: var(--card-2) !important; }
+
+/* Tabbar links must share width evenly (Konsta w-full links overflow) */
+.k-toolbar .k-link { flex: 1 1 0%; min-width: 0; width: auto; }
+
+/* Navbar sizing + horizontal padding (safe-area utils resolve to 0 on web) */
+.k-navbar [class*="px-safe"] {
+  padding-left: max(16px, env(safe-area-inset-left)) !important;
+  padding-right: max(16px, env(safe-area-inset-right)) !important;
+}
+.k-navbar .h-16 { height: 52px; }
+.k-navbar [class*="5.5rem"] { height: 64px; }
+
+/* FAB */
+.k-fab {
+  background: var(--accent) !important;
+  color: #fff !important;
+  box-shadow: var(--shadow-fab) !important;
+  border-radius: 26px !important;
+  font-weight: 600;
+}
+
+/* Switches (headlessui role=switch) */
+[role="switch"] { background: color-mix(in srgb, var(--muted) 45%, transparent); border-radius: 20px; }
+[role="switch"][aria-checked="true"] { background: var(--accent) !important; }
+[role="switch"] > span { background: #fff !important; box-shadow: 0 1px 3px rgba(0,0,0,.25); border-radius: 50%; }
+
+/* Preloader accent */
+.k-preloader { color: var(--accent); }
+
+/* Money/mono: any element flagged data-mono, plus common amount classes */
+[data-mono], .font-mono, .tabular-nums { font-family: var(--mono) !important; font-feature-settings: "tnum" 1; }
+
+/* --- Native app shell (Capacitor/iOS) ------------------------------
+   All scrolling happens inside the app's own scroll containers; the
+   page itself must never scroll or rubber-band, or WKWebView's outer
+   scroll view can sit at a stale offset and show the native window
+   background as a band above the header. */
+html, body { height: 100%; overflow: hidden; }
+body { position: fixed; inset: 0; width: 100%; }
+
+/* WebKit date/time inputs have an intrinsic width and refuse to shrink
+   inside flex rows; when empty they can overflow the screen edge. */
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Screens without a navbar start at y=0 and draw their title/Back button
+   under the status bar & Dynamic Island. This utility pads a screen's top
+   container clear of them (16px visual + the device inset). */
+.pt-safe-top { padding-top: calc(var(--safe-top) + 16px) !important; }
+
+
+/* ---------------------------------------------------------------------------
+   Tablet (>= 768px). Everything above is phone-first and unchanged below this
+   width. These rules only rein in things that stretch to the viewport.
+   --------------------------------------------------------------------------- */
+@media (min-width: 700px) {
+  /* The tab bar spans the shell, but its links are `flex: 1 1 0%`, so on a
+     1280dp tablet five icons drift ~256px apart. Cap and centre the row while
+     the bar's own background still spans edge to edge. */
+  .konsta-tabbar-fixed .ora-tabbar-inner {
+    max-width: 560px;
+    margin-inline: auto;
+  }
+
+  /* Segments size to their text instead of splitting the full width, so a
+     three-item control does not spread three words across the screen. */
+  .k-segmented.segmented-scroll > * {
+    flex: 0 1 auto;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .k-segmented.segmented-scroll { justify-content: center; }
+
+  /* Sheets and dialogs are `left:0;right:0` by default — a 1280px-wide sheet
+     holding one column of rows. */
+  .k-sheet, .sheet {
+    max-width: var(--sheet-max);
+    margin-inline: auto;
+    left: 0;
+    right: 0;
+  }
+
+  /* 80% of 1280px is not a toast. */
+  .toast { max-width: 420px; }
+
+  /* Anchor the FAB to the content column rather than the viewport edge, so it
+     does not float alone in the right-hand gutter. */
+  .fab { right: 24px; }
+}
+
+/* Between the cap and the viewport the page shows canvas, not white, so the
+   centred column reads as intentional. */
+@media (min-width: 700px) {
+  html, body { background: var(--canvas); }
+}
+
+
+/* Konsta reads every safe area (navbar pt-safe, sheet / toolbar pb-safe, …)
+   from --k-safe-area-*, which it fills from env(). On Android env() covers the
+   display cutout only, so on a device without a notch Konsta navbars rode up
+   under the status bar and sheets sat on the gesture bar. Feed Konsta the
+   merged platform values instead (identical to env() on iOS). */
+.safe-areas {
+  --k-safe-area-top: var(--safe-top);
+  --k-safe-area-bottom: var(--safe-bot);
+  --k-safe-area-left: max(env(safe-area-inset-left, 0px), var(--android-inset-left, 0px));
+  --k-safe-area-right: max(env(safe-area-inset-right, 0px), var(--android-inset-right, 0px));
+}
+
+/* Android resizes the WebView above the keyboard, which would stack the tab
+   bar and any FAB on top of the keys and leave the focused field a sliver of
+   room. capacitor-init toggles body.keyboard-open (Android only). */
+body.keyboard-open .konsta-tabbar-fixed,
+body.keyboard-open [data-testid="konsta-fab-container"] {
+  display: none !important;
+}
+
+/* Konsta's tab bar uses its own env()-based pb-safe, which is 0 on Android even
+   when a gesture bar is present. Top it up with the real inset. */
+/* Lift the tab icons off the screen edge / home indicator. */
+.konsta-tabbar-fixed { padding-top: 6px; padding-bottom: calc(var(--safe-bot, 0px) + 10px); }
+
+
+/* Konsta's material Searchbar is built to sit in an UNPADDED container: it
+   bleeds outward with `-mx-2 w-[calc(100%+32px)]`. Every screen here supplies
+   its own px-4, so that bleed pushes the field past the right edge where it is
+   clipped. Keep it inside its parent. */
+.k-searchbar {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100% !important;
+}
+
+/* Lists that carry a floating action button need to clear it, or the last row's
+   buttons sit under the FAB and cannot be tapped.
+   FAB bottom = 4rem + safe inset + 16px, plus its own ~48px height. */
+.pb-fab { padding-bottom: calc(8rem + var(--safe-bot, 0px)) !important; }
+
+
+/* ---------------------------------------------------------------------------
+   Responsive dashboard grid. Phones: one column (flex, set in markup).
+   Large tablets (>= 1024px): stat cards and Quick Create span the full width,
+   Recent Invoices and Needs Attention sit side by side.
+   --------------------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  .dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
+  .dash-grid > * { grid-column: 1 / -1; }
+  /* Recent Invoices shares a row only when Needs Attention is present. */
+  .dash-grid > [data-testid="recent-invoices-section"]:has(~ [data-dash-half]),
+  .dash-grid > [data-dash-half] { grid-column: auto; }
+}
+
+/* ---------------------------------------------------------------------------
+   Tablet reading width. Forms, details and lists are sized for a phone, so on
+   a wide screen they are capped to a readable column and centred. Overview
+   screens that genuinely use the width (the dashboard) opt out with
+   `data-wide` on their Page.
+   --------------------------------------------------------------------------- */
+@media (min-width: 700px) {
+  .k-page > :not(.k-navbar):not([class*="fixed"]):not([class*="absolute"]) {
+    width: 100%;
+    max-width: var(--page-max);
+    /* !important: several Konsta elements (block titles above) pin their own
+       side margins, which would leave them hanging outside the column. */
+    margin-inline: auto !important;
+  }
+  .k-page[data-wide] > :not(.k-navbar):not([class*="fixed"]):not([class*="absolute"]) {
+    max-width: none;
+  }
+}
+
+/* Bottom action / form bars span the whole screen on a tablet (a white strip
+   the width of the reading column looked unfinished), with their buttons
+   lined up to that column. In a split-view pane the column is the pane. */
+@media (min-width: 700px) {
+  .k-page > [class*="sticky"][class*="bottom-0"]:not(.k-navbar) {
+    max-width: none;
+  }
+  /* Screens that wrap everything in one full-height column (wizards, the
+     customer profile): the wrapper stays full width so its bar can, and the
+     reading-width cap moves down to the wrapper's children. */
+  .k-page > .flex-col.min-h-full:not(.k-navbar),
+  .k-page > .flex-col.h-full:not(.k-navbar) {
+    max-width: none;
+  }
+  .k-page > .flex-col.min-h-full > :not([class*="fixed"]):not([class*="absolute"]):not([class*="sticky"]),
+  .k-page > .flex-col.h-full > :not([class*="fixed"]):not([class*="absolute"]):not([class*="sticky"]) {
+    width: 100%;
+    max-width: var(--page-max);
+    margin-inline: auto !important;
+  }
+  .k-page[data-wide] > .flex-col > * { max-width: none; }
+  [data-testid="v2-bottom-bar"],
+  [data-testid="v2-form-bar"],
+  [data-testid="v2-form-save-bar"] {
+    padding-inline: max(16px, calc((100% - var(--page-max)) / 2 + 16px)) !important;
+  }
+  /* The large navbar title ("Job Cards", "Settings") starts where the
+     column starts, not at the screen edge. */
+  .k-page:not([data-wide]) > .k-navbar [class*="text-[34px]"] {
+    padding-inline: max(16px, calc((100% - var(--page-max)) / 2 + 16px)) !important;
+  }
+}
+
+/* A closed sheet waits just below the screen; without this its drop shadow
+   showed as a grey smudge along the bottom edge of every screen with one. */
+.k-sheet:not(.\-translate-y-full) { box-shadow: none !important; }
+
+
+/* ---------------------------------------------------------------------------
+   Auth screens on a tablet. On a phone the sign-in screen is a full-height
+   white page. Stretched to an iPad that reads as a phone app letterboxed on
+   black, so from 700px the same markup becomes a card: brand backdrop behind,
+   the card sized by its content and centred on both axes.
+   --------------------------------------------------------------------------- */
+@media (min-width: 700px) {
+  .auth-shell {
+    background:
+      radial-gradient(120% 90% at 50% -10%, #312e81 0%, transparent 60%),
+      linear-gradient(180deg, #0f172a 0%, #0b1120 100%);
+  }
+  /* Konsta's Page is absolutely positioned, so inside a content-sized card it
+     would collapse to zero height. Let it flow instead. */
+  .auth-card .k-page {
+    position: relative;
+    height: auto;
+    overflow: visible;
+    /* The Konsta skin paints every page with the canvas colour; inside the card
+       that shows as a grey strip under the form. */
+    background: transparent !important;
+  }
+}
+
+/* The self-hosted subsets drop the fi/fl ligature glyphs while keeping the
+   substitution rules, which renders "oraflows" with a tofu box. The app has no
+   typographic need for them. */
+html { font-variant-ligatures: no-common-ligatures; }
+
+/* A row whose record is open in the detail pane beside it (tablet split view). */
+.ora-row-selected > a,
+.ora-row-selected > div,
+.ora-row-selected .k-list-item-link {
+  background: color-mix(in srgb, var(--accent) 10%, transparent) !important;
+}
+
+/* In a two-pane layout the list is already on screen, so the detail's back
+   arrow has nothing to go back to. */
+.ora-split-detail .k-navbar-back-link { display: none; }
+/* The same for the v2 status hero's round back button (quotes, staff, vehicles…). */
+.ora-split-detail [data-testid="hero-back"] { visibility: hidden; }
+
+/* ============ OraSec: signatures ============ */
+.signature-text { font-family: var(--signature); font-weight: 700; line-height: 1; }
+
+/* ============ Search field (list screens) ============ */
+.search { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-ctl); color: var(--muted); }
+.search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3.5px var(--accent-soft); }
+.search input { flex: 1; min-width: 0; background: transparent; border: none; outline: none; font-size: 15px; color: var(--text); font-family: var(--sans); }
+.search input::placeholder { color: var(--muted-2); }
+.search button { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; color: var(--muted); }
+
+/* Sign-in screens are a full-height white page on a phone (their own markup
+   says bg-white / dark:bg-gray-900). The Konsta skin above forces every
+   .k-page onto the canvas colour, which left a grey band under the form. */
+.auth-card .k-page { background: var(--card-solid) !important; }
+
+/* Document names are long ("Contractor agreement - Aroha Builders"); on a
+   phone one line cut them to ~15 characters. Lists of documents let the
+   title wrap to two lines. */
+.list.doc-titles .li .t { white-space: normal; display: -webkit-box !important; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* =====================================================================
+   APPEARANCES (9 looks + Auto) — variables come from the web app's tokens
+   via src/theme/appearance.ts (never hard-coded here). This layer maps them
+   onto the shared design-system parts.
+   ===================================================================== */
+body { background: var(--page-bg, var(--canvas)); background-attachment: fixed; }
+
+/* Panels: each look's own border + depth (flat, neumorphic double shadow,
+   vintage print shadow, glass). */
+.card, .list, .kpi {
+  border: var(--panel-bw, 1px) solid var(--panel-border, var(--border));
+  box-shadow: var(--shadow-card);
+}
+.list .li { border-bottom-color: color-mix(in srgb, var(--border) 70%, transparent); }
+
+/* Glass: frosted panels. Falls back to solid panels when the phone asks for
+   less transparency (iOS Reduce Transparency) — same colours, no blur. */
+:root[data-appearance="glass"] .card,
+:root[data-appearance="glass"] .list,
+:root[data-appearance="glass"] .kpi,
+:root[data-appearance="glass"] .ora-tabbar-inner {
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-appearance="glass"] .card,
+  :root[data-appearance="glass"] .list,
+  :root[data-appearance="glass"] .kpi,
+  :root[data-appearance="glass"] .ora-tabbar-inner,
+  :root[data-appearance="glass"] .navbar {
+    background: var(--card-solid) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  :root[data-appearance="glass"] body { background: var(--canvas); }
+}
+:root.reduce-transparency[data-appearance="glass"] .card,
+:root.reduce-transparency[data-appearance="glass"] .list,
+:root.reduce-transparency[data-appearance="glass"] .ora-tabbar-inner { background: var(--card-solid) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+
+/* Header bar */
+.navbar { background: var(--topbar-bg, color-mix(in srgb, var(--card) 86%, transparent)); border-bottom: 1px solid var(--topbar-border, var(--border)); }
+.nav-big h1, h1, h2, h3, .heading { font-family: var(--heading, var(--sans)); text-transform: var(--heading-case, none); letter-spacing: var(--heading-tracking, -0.02em); }
+.kpi .kval, .li .amt, .mono-num { font-family: var(--number, var(--mono)); }
+
+/* Inputs: wells in the neumorphic looks */
+.input, .textarea, .select, .search {
+  background: var(--input-bg, var(--card));
+  border-color: var(--input-border, var(--border-strong));
+  box-shadow: var(--input-shadow, none);
+}
+
+/* Buttons: primary / Sign stay solid in every look (brief rule) */
+.btn-primary { background: var(--accent); color: var(--accent-on, #fff); box-shadow: var(--shadow-fab, none); }
+.btn-primary:active { background: var(--accent-press); }
+.btn-brand { background: var(--brand); color: var(--brand-on); box-shadow: var(--shadow-fab, none); }
+.btn-ghost { background: var(--button-bg, var(--card)); border: var(--button-bw, 1px) solid var(--button-border, var(--border-strong)); box-shadow: var(--button-shadow, none); color: var(--text); }
+.fab { background: var(--accent); color: var(--accent-on, #fff); box-shadow: var(--shadow-fab); }
+/* Selected segment: the look's raised "selected" surface, with normal text. */
+.seg button.on { background: var(--selected-bg, var(--card)); color: var(--text); box-shadow: var(--selected-shadow, none); }
+/* Selected filter chip: solid accent with its own text colour in every look.
+   (It used the look's selected surface — white in the light looks — while
+   keeping white text, so "All" disappeared on the Documents screen.) */
+.chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-on, #fff); box-shadow: var(--selected-shadow, none); }
+.chip { background: var(--button-bg, var(--card)); }
+
+/* Neumorphic edges are weak — clear focus and pressed states (a11y). */
+:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+button:active, [role='button']:active { filter: brightness(0.97); }
+
+/* Floating bottom bar = the web sidebar (phone + tablet) */
+.ora-tabbar-inner {
+  background: var(--nav-bg, var(--card)) !important;
+  border: 1px solid var(--nav-border, var(--border)) !important;
+  box-shadow: var(--nav-shadow, 0 10px 30px -12px rgba(11,18,32,.35)) !important;
+}
+.ora-tab { color: var(--nav-text); }
+.ora-tab[aria-selected='true'] { color: var(--nav-active-text); background: var(--nav-active-bg); box-shadow: var(--nav-active-shadow, none); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* OraSec brand stripe (the thin gradient line under the header) */
+.brand-stripe { height: var(--stripe-h, 0); background: var(--stripe, transparent); }
+
+/* ============================================================
+   APPEARANCE PICKER (Settings → Appearance)
+   ============================================================ */
+.appearance-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 768px) { .appearance-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; } }
+@media (min-width: 1024px) { .appearance-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.appearance-card {
+  display: flex; flex-direction: column; gap: 8px; padding: 8px; text-align: left;
+  border-radius: var(--r-card); background: var(--card); color: var(--text);
+  border: var(--panel-bw, 1px) solid var(--panel-border, var(--border));
+  box-shadow: var(--shadow-card-sm, none); min-height: 44px;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.appearance-card:active { transform: scale(.98); }
+.appearance-card.on { outline: 2.5px solid var(--accent); outline-offset: 1px; }
+.appearance-preview { display: block; aspect-ratio: 4 / 3; border-radius: calc(var(--r-card) - 4px); overflow: hidden; }
+.appearance-preview.split { display: grid; grid-template-columns: 1fr 1fr; }
+.appearance-meta { display: flex; flex-direction: column; gap: 2px; padding: 0 4px 4px; }
+.appearance-name { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; }
+.appearance-check { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 999px; background: var(--accent); color: var(--accent-on); }
+.appearance-desc { font-size: 12px; line-height: 1.3; color: var(--muted); }
+.ap-frame { position: relative; display: flex; flex-direction: column; gap: 6px; width: 100%; height: 100%; padding: 0 0 6px; }
+.ap-bar { display: flex; align-items: center; gap: 5px; height: 16%; padding: 0 6px; }
+.ap-logo { width: 10px; height: 10px; border-radius: 3px; }
+.ap-line { display: block; height: 4px; border-radius: 2px; opacity: .85; }
+.ap-line.sm { height: 3px; opacity: .6; }
+.ap-card { display: flex; flex-direction: column; gap: 5px; margin: 0 7px; padding: 7px; }
+.ap-row { display: flex; gap: 4px; margin-top: 2px; }
+.ap-btn { display: block; width: 22px; height: 8px; border-radius: 4px; }
+.ap-nav { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); display: flex; gap: 6px; padding: 4px 8px; border-radius: 999px; }
+.ap-dot { width: 6px; height: 6px; border-radius: 999px; }
+
+/* ============================================================
+   SETTINGS HUB + HOME (phone: one column · tablet: grid)
+   ============================================================ */
+.settings-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px 20px; align-items: start; }
+@media (min-width: 768px) { .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.settings-grid > section { display: flex; flex-direction: column; gap: 8px; }
+.home-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (min-width: 768px) { .home-grid { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; } }
+.kpi-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 768px) { .kpi-row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; } }
+.kpi-btn { text-align: left; width: 100%; }
+.quick-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.quick-action {
+  display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 12px 14px; text-align: left;
+  border-radius: var(--r-card); background: var(--card); color: var(--text); font-weight: 600; font-size: 14px;
+  border: var(--panel-bw, 1px) solid var(--panel-border, var(--border)); box-shadow: var(--shadow-card-sm, none);
+}
+.quick-action .qa-ico { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-fg); flex-shrink: 0; }
+.quick-action.brand .qa-ico { background: var(--brand); color: var(--brand-on); }
+.quick-action:active { transform: scale(.98); }
+
+/* ============================================================
+   PULL TO REFRESH
+   ============================================================ */
+.ptr-indicator { display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+.ptr-spinner { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 6px; border-radius: 999px; background: var(--card-solid); color: var(--accent-fg); box-shadow: var(--shadow-card-sm, 0 1px 3px rgb(0 0 0 / .15)); }
+.ptr-spinner.spin { animation: ptr-spin .8s linear infinite; }
+@keyframes ptr-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ptr-spinner.spin { animation-duration: 2.4s; } }
+
+/* Empty states inside a card (Home sections) are compact. */
+.card > .state { padding: 22px 20px; }
+.card > .state .state-ico { width: 44px; height: 44px; border-radius: 14px; margin-bottom: 10px; }
+.card > .state .state-ico svg { width: 22px; height: 22px; }
+.card > .state h3 { font-size: 15px; }
+.home-side { order: -1; }
+@media (min-width: 768px) { .home-side { order: 0; position: sticky; top: 0; } }
+
+@media (min-width: 768px) and (max-width: 1023px) { .home-side .quick-actions { grid-template-columns: minmax(0, 1fr); } }
+@media (min-width: 768px) { .settings-signout { max-width: 420px; align-self: center; width: 100%; } }
+
+/* Sign-in fields: the input row is the control (one focus ring on the row). */
+.auth-field { background: var(--input-bg, var(--card-solid)); border-color: var(--input-border, var(--border-strong)); box-shadow: var(--input-shadow, none); color: var(--muted); }
+.auth-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3.5px var(--accent-soft); }
+.auth-field.error { border-color: var(--danger); }
+.auth-field input:focus-visible { outline: none; }
+
+/* ============================================================
+   44px TOUCH TARGETS (Apple HIG / the brief's WCAG target)
+   Visual sizes stay compact where needed; the hit area is 44px.
+   ============================================================ */
+.nav-btn { min-width: 44px; min-height: 44px; }
+.btn-sm { height: 44px; }
+.chip { min-height: 44px; }
+.seg button { min-height: 44px; }
+.seg { min-height: 50px; }
+.fe-recip, .move-crumbs .chip, .fe-settings .seg-sm button, .es-tabs button { min-height: 44px; }
+/* Text links in forms ("Forgot password?") get a taller hit box without moving the text. */
+a.text-sm, button.text-sm { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* Native checkbox used as a switch (<input type="checkbox" role="switch">): an
+   iOS-style switch in every appearance. Its row (a <label>) is the 44px target. */
+input[type='checkbox'][role='switch'] {
+  appearance: none; -webkit-appearance: none; position: relative; flex-shrink: 0;
+  width: 46px; height: 28px; margin: 0; border-radius: 999px; cursor: pointer;
+  background: color-mix(in srgb, var(--muted) 45%, transparent); border: none; transition: background .15s ease;
+}
+input[type='checkbox'][role='switch']::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s ease;
+}
+input[type='checkbox'][role='switch']:checked { background: var(--accent) !important; }
+input[type='checkbox'][role='switch']:checked::after { transform: translateX(18px); }
+input[type='checkbox'][role='switch']:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+input[type='checkbox'][role='switch']:disabled { opacity: .5; }
+
+/* Signed-out screens: the status-bar strip matches the brand header (AppShell sets the class). */
+body.ora-brand-top::after { background: #0D1514; backdrop-filter: none; -webkit-backdrop-filter: none; } /* OraSec console dark (link header) */
+
+/* Brand stripe under the top bar for appearances that have one (OraFlows Navy's
+   teal→gold ribbon, Vintage's barn-red band) — the web shows it on its top bar. */
+.navbar::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px;
+  height: var(--stripe-h, 0px); background: var(--stripe, transparent); pointer-events: none;
+}
+
+/* Brand surfaces (sign-in, lock): page background with the brand glow behind the header. */
+.brand-surface { background: var(--page-bg) !important; color: var(--text); }
+.brand-surface .auth-hero { background: transparent !important; }
+.brand-surface .auth-card { background: transparent !important; }
+.brand-surface .auth-card .k-page { background: transparent !important; }
+.brand-surface .auth-card .k-block { background: var(--card-solid) !important; }
+.brand-surface .auth-card .k-page { display: flex; flex-direction: column; }
+.brand-surface .auth-card .k-page > .k-block:last-child { flex: 1 0 auto; margin-bottom: 0; padding-bottom: calc(24px + var(--safe-bot)); }
+/* Konsta's disabled button is black/10 — invisible on navy. */
+.brand-surface .k-button.pointer-events-none { background: color-mix(in srgb, var(--accent) 26%, var(--card-solid)) !important; color: color-mix(in srgb, var(--text) 55%, transparent) !important; }
+.brand-surface .auth-hero h1 { color: var(--gold-text) !important; }
+/* PIN / lock screens: the brand navy with the teal and gold glow (vars from BRAND_SURFACE_SELECTOR). */
+.lock-screen { background: var(--page-bg) !important; }
+.lock-screen .lock-title { color: var(--gold-text); }
+
+/* OraSec brand surfaces (link + lock screens): the console dark with a teal glow,
+   matching the app icon and the web console. Overrides the inherited OraFlows Navy
+   brand tokens; `html` raises specificity above the injected appearance CSS. */
+html .brand-surface, html .lock-screen {
+  --accent: #19C2A5; --color-primary: #19C2A5; --accent-fg: #19C2A5; --accent-on: #04201B;
+  --accent-press: color-mix(in srgb, #19C2A5 84%, #000); --accent-soft: color-mix(in srgb, #19C2A5 14%, transparent);
+  --brand: #19C2A5; --brand-on: #04201B; --gold-text: #FFFFFF; --link: #6FE3CE;
+  --ink: #0D1514; --canvas: #0B1312;
+  --page-bg: radial-gradient(circle at 12% 0%, rgba(25,194,165,.20), rgba(0,0,0,0) 42%), radial-gradient(circle at 92% 8%, rgba(0,168,144,.12), rgba(0,0,0,0) 36%), #0B1312;
+  --card: #13201E; --card-solid: #13201E; --card-2: #172624; --well: #0F1A18;
+  --border: #24413C; --border-strong: #2C4F49; --text: #EEF6F4; --muted: #A9C2BD; --muted-2: #A9C2BD;
+  --popover: #172624; --input-bg: #0F1A18; --input-border: #2C4F49;
+  --button-bg: #172624; --selected-bg: rgba(25,194,165,0.18); --selected-shadow: inset 0 0 0 1px rgba(25,194,165,0.55);
+  --shadow-fab: 0 6px 18px rgba(25,194,165,0.28);
+  --nav-bg: #0D1514;
+}
+html .brand-surface .auth-hero h1 { color: #FFFFFF !important; }
+html .lock-screen .lock-title { color: #FFFFFF; }

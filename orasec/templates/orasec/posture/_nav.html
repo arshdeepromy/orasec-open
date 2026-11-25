@@ -1,0 +1,95 @@
+{% load i18n %}
+                    <!-- OraSec security posture -->
+                    <a href="{% url 'orasec_command_center' %}" class="flex items-center gap-3 px-4 py-2 transition-colors">
+                        <i class="fa-solid fa-shield-halved w-5 text-center flex-shrink-0"></i>
+                        <span class="truncate">{% trans "Command Center" %}</span>
+                    </a>
+                    <a href="{% url 'orasec_my_work' %}" class="flex items-center gap-3 px-4 py-2 transition-colors">
+                        <i class="fa-solid fa-inbox w-5 text-center flex-shrink-0"></i>
+                        <span class="truncate">{% trans "My Work" %}</span>
+                    </a>
+                    <div x-data="{ open: false }">
+                        <a href="{% url 'orasec_assets' %}" @click.prevent="open = !open" class="flex items-center gap-3 px-4 py-2 transition-colors cursor-pointer">
+                            <i class="fa-solid fa-boxes-stacked w-5 text-center flex-shrink-0"></i>
+                            <span class="flex-1 truncate">{% trans "Asset Inventory" %}</span>
+                            <i :class="open && 'rotate-90'" class="fa-solid fa-chevron-right text-xs transition-transform duration-200"></i>
+                        </a>
+                        <div x-show="open" x-transition.duration.200ms x-cloak class="overflow-hidden">
+                            <a href="{% url 'orasec_assets' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Dashboard" %}</a>
+                            <a href="{% url 'orasec_assets_list' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "All assets" %}</a>
+                            <a href="{% url 'orasec_assets_group' 'devices' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Devices & network" %}</a>
+                            <a href="{% url 'orasec_assets_group' 'cloud-services' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Cloud services" %}</a>
+                            <a href="{% url 'orasec_assets_group' 'internal-tools' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Internal tools" %}</a>
+                            <a href="{% url 'orasec_assets_group' 'information' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Information" %}</a>
+                            <a href="{% url 'orasec_leavers' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Leavers and movers" %}</a>
+                        </div>
+                    </div>
+                    <div x-data="{ open: false }">
+                        <a href="{% url 'orasec_vulnerabilities' %}" @click.prevent="open = !open" class="flex items-center gap-3 px-4 py-2 transition-colors cursor-pointer">
+                            <i class="fa-solid fa-crosshairs w-5 text-center flex-shrink-0"></i>
+                            <span class="flex-1 truncate">{% trans "Exposure" %}</span>
+                            <i :class="open && 'rotate-90'" class="fa-solid fa-chevron-right text-xs transition-transform duration-200"></i>
+                        </a>
+                        <div x-show="open" x-transition.duration.200ms x-cloak class="overflow-hidden">
+                            <a href="{% url 'orasec_vulnerabilities' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Vulnerability Explorer" %}</a>
+                            <a href="{% url 'orasec_remediation' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Remediation Center" %}</a>
+                            <a href="{% url 'orasec_patch_center' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Patch Center" %}</a>
+                            <a href="{% url 'orasec_inventory' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Device details" %}</a>
+                            <a href="{% url 'orasec_scan_cadence' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Scan Cadence" %}</a>
+                            <a href="{% url 'orasec_insights_view' 'executive' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Insights" %}</a>
+                        </div>
+                    </div>
+                    <a href="{% url 'orasec_code' %}" class="flex items-center gap-3 px-4 py-2 transition-colors">
+                        <i class="fa-solid fa-code-branch w-5 text-center flex-shrink-0"></i>
+                        <span class="truncate">{% trans "Code & Repositories" %}</span>
+                    </a>
+                    <div x-data="{ open: false }">
+                        <a href="{% url 'orasec_attacks' %}" @click.prevent="open = !open" class="flex items-center gap-3 px-4 py-2 transition-colors cursor-pointer">
+                            <i class="fa-solid fa-earth-oceania w-5 text-center flex-shrink-0"></i>
+                            <span class="flex-1 truncate">{% trans "Network" %}</span>
+                            <i :class="open && 'rotate-90'" class="fa-solid fa-chevron-right text-xs transition-transform duration-200"></i>
+                        </a>
+                        <div x-show="open" x-transition.duration.200ms x-cloak class="overflow-hidden">
+                            <a href="{% url 'orasec_attacks' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Attack Map" %}</a>
+                            <a href="{% url 'orasec_topology' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Network Topology" %}</a>
+                        </div>
+                    </div>
+                    <div x-data="{ open: false }">
+                        <a href="{% url 'orasec_compliance' %}" @click.prevent="open = !open" class="flex items-center gap-3 px-4 py-2 transition-colors cursor-pointer">
+                            <i class="fa-solid fa-scale-balanced w-5 text-center flex-shrink-0"></i>
+                            <span class="flex-1 truncate">{% trans "Governance" %}</span>
+                            <i :class="open && 'rotate-90'" class="fa-solid fa-chevron-right text-xs transition-transform duration-200"></i>
+                        </a>
+                        <div x-show="open" x-transition.duration.200ms x-cloak class="overflow-hidden">
+                            <a href="{% url 'orasec_grc' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "GRC Dashboard" %}</a>
+                            <a href="{% url 'orasec_compliance' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "ISO 27001 Compliance" %}</a>
+                            <a href="{% url 'orasec_objectives' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Security Objectives" %}</a>
+                            <a href="{% url 'orasec_risk_assessments' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Risk Assessments" %}</a>
+                            <a href="{% url 'orasec_risks' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Risk Register" %}</a>
+                            <a href="{% url 'orasec_changes' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Change Register" %}</a>
+                            <a href="{% url 'orasec_exceptions' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Exceptions" %}</a>
+                            <a href="{% url 'orasec_suppliers' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Supplier Register" %}</a>
+                            <a href="{% url 'orasec_opportunities' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Opportunities" %}</a>
+                            <a href="{% url 'orasec_nonconformities' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Nonconformities" %}</a>
+                            <a href="{% url 'orasec_isms_sync' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Policy tool sync" %}</a>
+                            <a href="{% url 'orasec_risk_acceptances' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Finding Risk Acceptances" %}</a>
+                        </div>
+                    </div>
+                    <div x-data="{ open: false }">
+                        <a href="{% url 'orasec_connectors' %}" @click.prevent="open = !open" class="flex items-center gap-3 px-4 py-2 transition-colors cursor-pointer">
+                            <i class="fa-solid fa-plug w-5 text-center flex-shrink-0"></i>
+                            <span class="flex-1 truncate">{% trans "Automation" %}</span>
+                            <i :class="open && 'rotate-90'" class="fa-solid fa-chevron-right text-xs transition-transform duration-200"></i>
+                        </a>
+                        <div x-show="open" x-transition.duration.200ms x-cloak class="overflow-hidden">
+                            <a href="{% url 'orasec_plugins' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Plugins" %}</a>
+                            <a href="{% url 'orasec_connectors' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Connectors" %}</a>
+                            <a href="{% url 'orasec_triage_rules' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Triage Rules" %}</a>
+                            <a href="{% url 'orasec_diagnostics' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Diagnostics" %}</a>
+                            {% if request.user.is_superuser %}
+                            <a href="{% url 'orasec_priority_settings' %}" class="block py-1.5 ps-12 pe-4 text-sm">{% trans "Prioritisation & SLA" %}</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mx-4 my-2 border-t border-border"></div>
+

@@ -1,0 +1,24 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Risk Register | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "Risk Register" %}</h1><div class="sub">{% trans "ISO 27001 clauses 6.1.2 / 8.2 / 8.3: assessed risks, treatment, owners and residual risk, linked to controls and findings." %}</div></div>
+<div style="display:flex;gap:.4rem"><a class="btn" href="{% url 'orasec_grc' %}">{% trans "GRC Dashboard" %}</a><button class="btn" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+{% if can_compliance %}<a class="btn btn-p" href="{% url 'orasec_risk_new' %}"><i class="fa-solid fa-plus"></i> {% trans "Add risk" %}</a>{% endif %}</div></div>
+<div class="grid" style="grid-template-columns:minmax(260px,340px) 1fr">
+  <div class="card"><h2>{% trans "Heat map (open risks)" %}</h2>
+    <table style="border-collapse:separate;border-spacing:3px;width:100%">
+    {% for row in grid %}<tr><td class="muted" style="font-size:.7rem;width:18px">{{ row.0.0 }}</td>
+      {% for l, i, n, s in row %}<td style="height:44px;text-align:center;border-radius:6px;font-weight:700;background:{% if s >= 20 %}#f3a6a0{% elif s >= 12 %}#fcd2b0{% elif s >= 6 %}#fbeaa0{% else %}#cdeee6{% endif %}">{% if n %}{{ n }}{% endif %}</td>{% endfor %}</tr>{% endfor %}
+    <tr><td></td>{% for i in "12345" %}<td class="muted" style="font-size:.7rem;text-align:center">{{ i }}</td>{% endfor %}</tr></table>
+    <div class="muted" style="font-size:.75rem;margin-top:.3rem">{% trans "Rows: likelihood 5→1. Columns: impact 1→5." %}</div>
+  </div>
+  <div class="card">
+  <table class="t"><thead><tr><th>Ref</th><th>{% trans "Risk" %}</th><th>{% trans "Category" %}</th><th class="num">{% trans "Inherent" %}</th><th>{% trans "Treatment" %}</th><th class="num">{% trans "Residual" %}</th><th>{% trans "Owner" %}</th><th>{% trans "Status" %}</th><th>{% trans "Review" %}</th></tr></thead><tbody>
+  {% for r in items %}<tr><td class="mono">{{ r.ref }}</td><td><a class="lk" href="{% url 'orasec_risk' r.id %}">{{ r.title }}</a><div class="muted" style="font-size:.75rem">{% for c in r.controls.all %}{{ c.ref }} {% endfor %}</div></td>
+  <td>{% if r.category %}{{ r.category }}{% elif r.product %}{{ r.product.name }}{% else %}—{% endif %}</td><td class="num"><span class="b b-{{ r.inherent_band }}">{{ r.inherent_score }}</span></td><td>{{ r.get_treatment_display }}</td><td class="num">{% if r.residual_score %}<span class="b b-{{ r.residual_band }}">{{ r.residual_score }}</span>{% else %}—{% endif %}</td>
+  <td>{{ r.owner.get_full_name|default:r.owner|default:"—" }}</td><td>{{ r.get_status_display }}</td><td>{{ r.review_date|date:"j M Y"|default:"—" }}</td></tr>
+  {% empty %}<tr><td colspan="9" class="empty">{% trans "No risks recorded yet." %}</td></tr>{% endfor %}</tbody></table></div>
+</div>
+{% endblock %}
+

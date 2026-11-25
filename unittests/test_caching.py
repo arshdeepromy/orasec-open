@@ -1,0 +1,234 @@
+from crum import get_current_user, impersonate
+from django.test import TestCase, override_settings
+
+from orasec.caching import (
+    _L1_STORE,  # noqa: PLC2701 test needs the in-process store
+    READ_ONLY_CACHE_MARKER,
+    ReadOnlyCachedInstanceError,
+    cache_dict_to_model,
+    orasec_settings_cache,
+    invalidate_orasec_settings_cache,
+    model_to_cache_dict,
+)
+from orasec.celery import OraSecAsyncTask, app
+from orasec.celery_dispatch import orasec_dispatch_task
+from orasec.models import OraSec_User, System_Settings
+from orasec.request_cache import begin_task_cache, cache_for_request_or_task, end_task_cache, get_task_cache
+
+from .orasec_test_case import OraSecTestCase
+
+
+@override_settings(SETTINGS_CACHE_L1_TTL=30)
+class OraSecSettingsCacheTest(TestCase):
+
+    """
+    Unit tests for the in-process (L1) read-through decorator (orasec/caching.py).
+
+    There is no shared/L2 tier: the decorator only memoizes in-process and relies
+    on L1 reset at request/task boundaries for cross-process freshness.
+    """
+
+    def setUp(self):
+        _L1_STORE.clear()
+
+    def tearDown(self):
+        _L1_STORE.clear()
+
+    def _build_getter(self, *, key="k", returns=1):
+        calls = {"n": 0}
+
+        @orasec_settings_cache(key=key)
+        def getter():
+            calls["n"] += 1
+            return returns
+
+        return getter, calls
+
+    def test_l1_memoizes_in_process(self):
+        getter, calls = self._build_getter()
+        getter()
+        getter()
+        getter()
+        self.assertEqual(calls["n"], 1)        # computed once, then served from L1
+
+    @override_settings(SETTINGS_CACHE_L1_TTL=-1)
+    def test_l1_disabled_is_passthrough(self):
+        getter, calls = self._build_getter()
+        getter()
+        getter()
+        self.assertEqual(calls["n"], 2)        # recomputed every call when L1 off
+
+    def test_reset_recomputes(self):
+        getter, calls = self._build_getter()
+        getter()
+        _L1_STORE.reset()
+        getter()
+        self.assertEqual(calls["n"], 2)        # reset drops L1, so it recomputes
+
+    def test_none_result_is_not_cached(self):
+        getter, calls = self._build_getter(returns=None)
+        self.assertIsNone(getter())
+        self.assertIsNone(getter())
+        self.assertEqual(calls["n"], 2)        # None recomputed each call (never stored)
+
+    def test_invalidate_recomputes(self):
+        getter, calls = self._build_getter(returns=7)
+        self.assertEqual(getter(), 7)
+        invalidate_orasec_settings_cache("k")
+        getter()
+        self.assertEqual(calls["n"], 2)        # recomputed after invalidation
+
+
+class ModelDictRoundTripTest(OraSecTestCase):
+
+    def test_round_trip_preserves_field_values(self):
+        settings_obj = System_Settings.objects.get(no_cache=True)
+        data = model_to_cache_dict(settings_obj)
+        self.assertIsInstance(data, dict)
+        self.assertEqual(data["id"], settings_obj.pk)
+        rebuilt = cache_dict_to_model(System_Settings, data)
+        self.assertEqual(rebuilt.pk, settings_obj.pk)
+        self.assertEqual(rebuilt.enable_deduplication, settings_obj.enable_deduplication)
+
+    def test_read_only_flag_only_when_requested(self):
+        data = model_to_cache_dict(System_Settings.objects.get(no_cache=True))
+        # default: saveable (no marker)
+        self.assertFalse(getattr(cache_dict_to_model(System_Settings, data), READ_ONLY_CACHE_MARKER, False))
+        # read_only=True: tagged as a read-only snapshot
+        self.assertTrue(getattr(cache_dict_to_model(System_Settings, data, read_only=True), READ_ONLY_CACHE_MARKER, False))
+
+
+class SystemSettingsSaveGuardTest(OraSecTestCase):
+
+    """
+    The read-through cache hands back a read-only snapshot: saving the instance
+    returned by ``System_Settings.objects.get()`` must fail loudly, while a fresh
+    ``no_cache=True`` instance saves normally.
+    """
+
+    def setUp(self):
+        _L1_STORE.clear()
+
+    def tearDown(self):
+        _L1_STORE.clear()
+
+    def test_saving_cached_instance_raises(self):
+        cached = System_Settings.objects.get()  # read-through (cached) path
+        self.assertTrue(getattr(cached, READ_ONLY_CACHE_MARKER, False))
+        cached.enable_deduplication = not cached.enable_deduplication
+        with self.assertRaises(ReadOnlyCachedInstanceError):
+            cached.save()
+
+    def test_no_cache_instance_is_saveable(self):
+        fresh = System_Settings.objects.get(no_cache=True)
+        self.assertFalse(getattr(fresh, READ_ONLY_CACHE_MARKER, False))
+        fresh.enable_deduplication = not fresh.enable_deduplication
+        fresh.save()  # must not raise
+
+
+class CacheForRequestOrTaskTest(OraSecTestCase):
+
+    """
+    ``cache_for_request_or_task`` caches within a task (no request) and isolates by
+    the effective (impersonated) user, so per-user results cannot leak between users
+    on a reused worker thread.
+    """
+
+    def setUp(self):
+        self.calls = {"n": 0}
+
+        @cache_for_request_or_task
+        def getter():
+            self.calls["n"] += 1
+            user = get_current_user()
+            return (self.calls["n"], user.pk if user else None)
+
+        self.getter = getter
+        self.user_a = OraSec_User.objects.create(username="roq_user_a")
+        self.user_b = OraSec_User.objects.create(username="roq_user_b")
+
+    def tearDown(self):
+        end_task_cache()  # ensure no task cache leaks to the next test
+
+    def test_no_context_is_passthrough(self):
+        self.getter()
+        self.getter()
+        self.assertEqual(self.calls["n"], 2)  # no request and no task -> recomputed
+
+    def test_task_scope_caches(self):
+        begin_task_cache()
+        with impersonate(self.user_a):
+            r1 = self.getter()
+            r2 = self.getter()
+        self.assertEqual(r1, r2)
+        self.assertEqual(self.calls["n"], 1)  # served from the task cache
+
+    def test_task_scope_isolates_users(self):
+        begin_task_cache()
+        with impersonate(self.user_a):
+            a = self.getter()
+        with impersonate(self.user_b):
+            b = self.getter()  # same task, different user -> must NOT get a's value
+        self.assertEqual(a[1], self.user_a.pk)
+        self.assertEqual(b[1], self.user_b.pk)
+        self.assertNotEqual(a, b)
+
+    def test_end_task_cache_clears(self):
+        begin_task_cache()
+        with impersonate(self.user_a):
+            self.getter()
+        end_task_cache()
+        with impersonate(self.user_a):
+            self.getter()  # no task cache and no request -> recomputed
+        self.assertEqual(self.calls["n"], 2)
+
+
+class NestedTaskCacheTest(OraSecTestCase):
+
+    """
+    A task run in the foreground inside another task (``orasec_dispatch_task(..., force_sync=True)``)
+    gets a task cache of its own and gives the outer task's cache back when it ends.
+    """
+
+    # Regression: the nested task's end set the thread's task cache to None, so every memoized read
+    # for the rest of the outer task (a chunked connector reimport, after its first batch's
+    # synchronous prioritization) went back to the database or the shared cache.
+    def test_nested_foreground_task_keeps_the_outer_task_cache(self):
+        seen = {}
+        calls = {"n": 0}
+
+        @cache_for_request_or_task
+        def getter():
+            calls["n"] += 1
+            return calls["n"]
+
+        # Registered for this test only. Celery hands back an already registered task for a name it
+        # has seen, so a second run in one process would otherwise call the first run's closures.
+        for name in ("unittests.test_caching.nested_inner", "unittests.test_caching.nested_outer"):
+            app.tasks.pop(name, None)
+            self.addCleanup(app.tasks.pop, name, None)
+
+        @app.task(base=OraSecAsyncTask, name="unittests.test_caching.nested_inner")
+        def inner(*_args, **_kwargs):  # absorbs the dispatch kwargs (force_sync, async_user_id)
+            seen["inner"] = get_task_cache()
+
+        @app.task(base=OraSecAsyncTask, name="unittests.test_caching.nested_outer")
+        def outer(*_args, **_kwargs):
+            seen["outer_before"] = get_task_cache()
+            getter()
+            orasec_dispatch_task(inner, force_sync=True)
+            seen["outer_after"] = get_task_cache()
+            getter()
+
+        outer()
+
+        self.assertIsNotNone(seen["outer_before"])
+        self.assertIsNotNone(seen["inner"])
+        self.assertIsNot(seen["inner"], seen["outer_before"], msg="the nested task must not share the outer cache")
+        self.assertIs(
+            seen["outer_after"],
+            seen["outer_before"],
+            msg=f"outer task cache after the nested task: {seen['outer_after']!r}, before: {seen['outer_before']!r}",
+        )
+        self.assertEqual(calls["n"], 1, msg=f"memoized read computed {calls['n']} times in one task")
+        self.assertIsNone(get_task_cache(), msg="no task cache may outlive the outer task")

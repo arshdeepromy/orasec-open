@@ -1,0 +1,15 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Nonconformities | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}
+<div class="hdr"><div><h1>{% trans "Nonconformities" %}</h1><div class="sub">{% trans "ISO 27001 10.2: what went wrong, the cause, the corrective action and a check that it worked." %}</div></div>
+<div style="display:flex;gap:.4rem" class="noprint"><a class="btn" href="{% url 'orasec_grc' %}">{% trans "GRC Dashboard" %}</a>
+{% if can_compliance %}<a class="btn btn-p" href="{% url 'orasec_nonconformity_new' %}"><i class="fa-solid fa-plus"></i> {% trans "New nonconformity" %}</a>{% endif %}</div></div>
+<div class="card"><table class="t"><thead><tr><th>Ref</th><th>{% trans "Nonconformity" %}</th><th>{% trans "Source" %}</th><th>{% trans "Control" %}</th><th>{% trans "Owner" %}</th><th>{% trans "Due" %}</th><th>{% trans "Status" %}</th></tr></thead><tbody>
+{% for n in items %}<tr><td class="mono">{{ n.ref }}</td><td>{% if can_compliance %}<a class="lk" href="{% url 'orasec_nonconformity_edit' n.id %}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}</td>
+<td>{{ n.get_source_display }}</td><td class="mono">{{ n.control|default:"—" }}</td><td>{{ n.owner.get_full_name|default:n.owner.username|default:"—" }}</td>
+<td>{% if n.due_date and n.due_date < today and n.status != "closed" and n.status != "dropped" %}<span class="b b-off_track">{{ n.due_date|date:"j M Y" }}</span>{% else %}{{ n.due_date|date:"j M Y"|default:"—" }}{% endif %}</td>
+<td><span class="b b-{{ n.status }}">{{ n.get_status_display }}</span></td></tr>
+{% empty %}<tr><td colspan="7" class="empty">{% trans "No nonconformities recorded." %}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

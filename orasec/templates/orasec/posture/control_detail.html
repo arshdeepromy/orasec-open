@@ -1,0 +1,33 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{{ c.ref }} | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1><span class="mono">{{ c.ref }}</span> {{ c.title }}</h1><div class="sub">{{ c.framework.name }} · {{ c.category }} · {{ c.summary }}</div></div>
+<a class="btn" href="{% url 'orasec_compliance' %}">← {% trans "Controls" %}</a></div>
+<div class="grid g2">
+  <div class="card">
+    <h2>{% trans "Status" %}</h2>
+    <p><span class="b b-{{ impl.status }}">{{ impl.get_status_display }}</span> · {% trans "Applicable" %}: <b>{{ impl.applicable|yesno:"Yes,No" }}</b> · {% trans "Owner" %}: {{ impl.owner|default:"—" }}</p>
+    {% if c.auto_check %}<p style="margin-top:.6rem"><b>{% trans "Automated check" %}</b> <span class="b b-{{ impl.auto_status }}">{{ impl.get_auto_status_display }}</span> <span class="muted" style="font-size:.8rem">{{ impl.auto_evaluated_at|date:"j M Y H:i" }}</span><br>{{ impl.auto_detail }}</p>{% endif %}
+    {% if impl.justification %}<p style="margin-top:.6rem"><b>{% trans "SoA justification" %}:</b> {{ impl.justification|linebreaksbr }}</p>{% endif %}
+    {% if impl.implementation_notes %}<p style="margin-top:.6rem"><b>{% trans "Implementation" %}:</b> {{ impl.implementation_notes|linebreaksbr }}</p>{% endif %}
+    {% if risks %}<p style="margin-top:.6rem"><b>{% trans "Treats risks" %}:</b> {% for r in risks %}<a class="lk" href="{% url 'orasec_risk' r.id %}">{{ r.ref }}</a> {% endfor %}</p>{% endif %}
+  </div>
+  {% if form %}<form method="post" class="card f">{% csrf_token %}<h2>{% trans "Update implementation" %}</h2>{{ form.as_p }}<button class="btn btn-p" name="save_impl" value="1">{% trans "Save" %}</button></form>{% endif %}
+</div>
+<div class="grid g2" style="margin-top:1rem">
+  <div class="card"><h2>{% trans "Evidence" %}</h2>
+  <table class="t"><tbody>
+  {% for e in c.evidence.all %}<tr><td><b>{{ e.title }}</b> <span class="b {% if e.classification == 'restricted' %}b-fail{% elif e.classification == 'confidential' %}b-High{% else %}b-muted{% endif %}" title="POL-010">{{ e.get_classification_display }}</span><div class="muted" style="font-size:.78rem">{{ e.description }}</div></td>
+  <td>{% if e.file %}<a class="lk" href="{{ e.file.url }}">{% trans "file" %}</a>{% endif %} {% if e.url %}<a class="lk" href="{{ e.url }}" target="_blank" rel="noopener">{% trans "link" %}</a>{% endif %}</td>
+  <td class="muted" style="font-size:.8rem">{{ e.collected_at|date:"j M Y" }}{% if e.valid_until %} → {{ e.valid_until|date:"j M Y" }}{% endif %}<br>{{ e.get_source_display }}{% if e.created_by %} · {{ e.created_by }}{% endif %}</td></tr>
+  {% empty %}<tr><td class="empty">{% trans "No evidence yet." %}</td></tr>{% endfor %}</tbody></table>
+  {% if ev_form %}<form method="post" enctype="multipart/form-data" class="f" style="margin-top:1rem;border-top:1px solid #ebe7de;padding-top:.8rem">{% csrf_token %}{{ ev_form.as_p }}<button class="btn btn-p" name="add_evidence" value="1">{% trans "Add evidence" %}</button></form>{% endif %}
+  </div>
+  <div class="card"><h2>{% trans "Automated check history" %}</h2>
+  <table class="t"><tbody>
+  {% for r in checks %}<tr><td class="muted" style="white-space:nowrap">{{ r.evaluated_at|date:"j M H:i" }}</td><td><span class="b b-{{ r.result }}">{{ r.result }}</span></td><td style="font-size:.82rem">{{ r.detail }}</td></tr>
+  {% empty %}<tr><td class="empty">{% if c.auto_check %}{% trans "Not evaluated yet." %}{% else %}{% trans "This control is assessed manually." %}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+</div>
+{% endblock %}
+

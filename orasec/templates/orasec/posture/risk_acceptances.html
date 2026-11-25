@@ -1,0 +1,22 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Risk Acceptances | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "Risk Acceptances" %}</h1><div class="sub">{% trans "Every acceptance across all assets. New and extended acceptances need approval by someone other than the requester before findings are accepted." %}</div></div>
+<div class="tabs" style="margin:0;border:0"><a href="?" class="{% if not status %}on{% endif %}">{% trans "All" %}</a><a href="?status=pending" class="{% if status == 'pending' %}on{% endif %}">{% trans "Pending" %} ({{ pending }})</a>
+<a href="?status=approved" class="{% if status == 'approved' %}on{% endif %}">{% trans "Approved" %}</a><a href="?status=rejected" class="{% if status == 'rejected' %}on{% endif %}">{% trans "Rejected" %}</a></div></div>
+<div class="card">
+<table class="t"><thead><tr><th>{% trans "Name" %}</th><th>{% trans "Approval" %}</th><th class="num">{% trans "Findings" %}</th><th>{% trans "Owner" %}</th><th>{% trans "Requested by" %}</th><th>{% trans "Decided by" %}</th><th>{% trans "Created" %}</th><th>{% trans "Expires" %}</th><th></th></tr></thead><tbody>
+{% for ra in items %}
+<tr><td><b>{{ ra.name }}</b><div class="muted" style="font-size:.78rem">{{ ra.get_recommendation_display|default:"" }} · {{ ra.get_decision_display|default:"" }}</div></td>
+<td>{% if ra.approval %}<span class="b b-{{ ra.approval.status }}">{{ ra.approval.get_status_display }}</span>{% else %}<span class="b b-muted">{% trans "legacy (pre-approval)" %}</span>{% endif %}</td>
+<td class="num">{{ ra.n }}</td><td>{{ ra.owner|default:"—" }}</td><td>{{ ra.approval.requested_by|default:"—" }}</td>
+<td>{{ ra.approval.decided_by|default:"—" }}{% if ra.approval.decision_note %}<div class="muted" style="font-size:.75rem">{{ ra.approval.decision_note|truncatechars:60 }}</div>{% endif %}</td>
+<td class="muted">{{ ra.created|date:"j M Y" }}</td><td>{% if ra.is_expired %}<span class="b b-overdue">{% trans "expired" %}</span>{% else %}{{ ra.expiration_date|date:"j M Y"|default:"never" }}{% endif %}</td>
+<td>{% if ra.approval.status == "pending" and request.user.id != ra.approval.requested_by_id %}{% if request.user.is_staff or request.user.is_superuser %}
+<form method="post" action="{% url 'orasec_ra_decide' ra.approval.id %}" style="display:flex;gap:.3rem">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+<button class="btn btn-p" name="decision" value="approve">{% trans "Approve" %}</button><button class="btn btn-d" name="decision" value="reject">{% trans "Reject" %}</button></form>{% endif %}{% endif %}</td></tr>
+{% empty %}<tr><td colspan="9" class="empty">{% trans "No risk acceptances. Create them from a finding or engagement (Add Risk Acceptance)." %}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}
+

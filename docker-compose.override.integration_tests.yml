@@ -1,0 +1,85 @@
+---
+services:
+  integration-tests:
+    platform: "linux/amd64"
+    build:
+      context: ./
+      dockerfile: ${INTEGRATION_TESTS_DOCKERFILE:-Dockerfile.integration-tests-debian}
+    image: "orasec/orasec-integration-tests:${INTEGRATION_TESTS_VERSION:-latest}"
+    depends_on:
+      - nginx
+      - uwsgi
+    entrypoint: ['/wait-for-it.sh', '${ORASEC_DATABASE_HOST:-postgres}:${ORASEC_DATABASE_PORT:-5432}', '-t', '30', '--', '/app/docker/entrypoint-integration-tests.sh']
+    volumes:
+      - '.:/app:z'
+      - "orasec_media_integration_tests:${ORASEC_MEDIA_ROOT:-/app/media}"
+    environment:
+      PYTHONWARNINGS: error  # We are strict about Warnings during testing
+      ORASEC_BASE_URL: 'http://nginx:8080/'
+      ORASEC_SECURE_CROSS_ORIGIN_OPENER_POLICY: 'None'
+      ORASEC_ADMIN_USER: "${ORASEC_ADMIN_USER:-admin}"
+      ORASEC_ADMIN_PASSWORD: "${ORASEC_ADMIN_PASSWORD:-AdminsLoveIntegrationtests!}"
+      ORASEC_INTEGRATION_TEST_FILENAME: "${ORASEC_INTEGRATION_TEST_FILENAME}"
+  nginx:
+    volumes:
+      - orasec_media_integration_tests:/usr/share/nginx/html/media
+  uwsgi:
+    build:
+      target: development
+    entrypoint: ['/wait-for-it.sh', '${ORASEC_DATABASE_HOST:-postgres}:${ORASEC_DATABASE_PORT:-5432}', '-t', '30', '--', '/entrypoint-uwsgi-dev.sh']
+    volumes:
+      - '.:/app:z'
+      - orasec_media_integration_tests:${ORASEC_MEDIA_ROOT:-/app/media}
+    environment:
+      PYTHONWARNINGS: error  # We are strict about Warnings during testing
+      ORASEC_DEBUG: 'True'
+      ORASEC_DATABASE_URL: ${ORASEC_TEST_DATABASE_URL:-postgresql://orasec:orasec@postgres:5432/test_orasec}
+      ORASEC_SECURE_CROSS_ORIGIN_OPENER_POLICY: 'None'
+      ORASEC_SECRET_KEY: "${ORASEC_SECRET_KEY:-.}"
+      ORASEC_EMAIL_URL: "smtp://mailhog:1025"
+      ORASEC_V3_FEATURE_LOCATIONS: ${ORASEC_V3_FEATURE_LOCATIONS:-False}
+  celerybeat:
+    environment:
+      ORASEC_DATABASE_URL: ${ORASEC_TEST_DATABASE_URL:-postgresql://orasec:orasec@postgres:5432/test_orasec}
+  celeryworker:
+    entrypoint: ['/wait-for-it.sh', '${ORASEC_DATABASE_HOST:-postgres}:${ORASEC_DATABASE_PORT:-5432}', '-t', '30', '--', '/entrypoint-celery-worker-dev.sh']
+    environment:
+      ORASEC_DATABASE_URL: ${ORASEC_TEST_DATABASE_URL:-postgresql://orasec:orasec@postgres:5432/test_orasec}
+      ORASEC_V3_FEATURE_LOCATIONS: ${ORASEC_V3_FEATURE_LOCATIONS:-False}
+      # Delay deduplication batches so the async_wait integration test can
+      # deterministically distinguish a blocking join (async_wait) from a
+      # non-blocking one (async). Scoped by _FILTER to that test's findings so
+      # other dedupe tests are unaffected. Integration-test stack only; never prod.
+      ORASEC_DEDUPLICATION_BATCH_PROCESS_TEST_DELAY: 10
+      ORASEC_DEDUPLICATION_BATCH_PROCESS_TEST_DELAY_FILTER: "async_wait finding"
+  initializer:
+    environment:
+      PYTHONWARNINGS: error  # We are strict about Warnings during testing
+      ORASEC_INITIALIZE: 'true'
+      ORASEC_DATABASE_URL: ${ORASEC_TEST_DATABASE_URL:-postgresql://orasec:orasec@postgres:5432/test_orasec}
+      ORASEC_ADMIN_PASSWORD: "${ORASEC_ADMIN_PASSWORD:-AdminsLoveIntegrationtests!}"
+      ORASEC_SECRET_KEY: "${ORASEC_SECRET_KEY:-.}"
+    volumes:
+      - '.:/app:z'
+  postgres:
+    ports:
+      - target: ${ORASEC_DATABASE_PORT:-5432}
+        published: ${ORASEC_DATABASE_PORT:-5432}
+        protocol: tcp
+        mode: host
+    environment:
+      POSTGRES_DB: ${ORASEC_TEST_DATABASE_NAME:-test_orasec}
+    volumes:
+      - orasec_postgres_integration_tests:/var/lib/postgresql/data
+  mailhog:
+    image: mailhog/mailhog:v1.0.1@sha256:8d76a3d4ffa32a3661311944007a415332c4bb855657f4f6c57996405c009bea
+    ports:
+      - target: 1025
+        published: 1025
+        protocol: tcp
+        mode: host
+  "webhook.endpoint":
+    image: mccutchen/go-httpbin:2.26.0@sha256:873b4fdb27fe7cc66fa12cb9362574e1b0bf31df7ca8a71b2502988327a0b8a4
+volumes:
+  orasec_postgres_integration_tests: {}
+  orasec_media_integration_tests: {}

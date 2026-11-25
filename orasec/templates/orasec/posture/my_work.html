@@ -1,0 +1,33 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}My Work | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "My Work" %}</h1><div class="sub">{% trans "Everything waiting on you: assignments, reviews, approvals, controls, risks and campaigns." %}</div></div></div>
+<div class="grid g4" style="margin-bottom:1rem">
+  <div class="card kpi"><div class="l">{% trans "Assigned findings" %}</div><div class="v">{{ assigned|length }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Approvals to decide" %}</div><div class="v">{{ approvals|length }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Controls I own" %}</div><div class="v">{{ controls|length }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Risks I own" %}</div><div class="v">{{ risks|length }}</div></div>
+</div>
+{% if approvals %}
+<div class="card" style="margin-bottom:1rem"><h2>{% trans "Risk acceptances awaiting your decision" %}</h2>
+{% include "orasec/posture/_approval_table.html" with items=approvals %}</div>
+{% endif %}
+<div class="card" style="margin-bottom:1rem"><h2>{% trans "Assigned findings" %}</h2>
+<table class="t"><thead><tr><th>{% trans "Band" %}</th><th>{% trans "Finding" %}</th><th>{% trans "Asset" %}</th><th>{% trans "Due" %}</th></tr></thead><tbody>
+{% for a in assigned %}<tr><td>{% if a.finding.priority %}<span class="b b-{{ a.finding.priority.band|cut:' ' }}">{{ a.finding.priority.band }}</span>{% endif %}</td><td><a class="lk" href="{% url 'view_finding' a.finding.id %}">{{ a.finding.title|truncatechars:100 }}</a></td><td>{{ a.finding.test.engagement.product.name }}</td><td>{{ a.finding.priority.due_date|date:"j M Y" }}</td></tr>
+{% empty %}<tr><td colspan="4" class="empty">{% trans "Nothing assigned to you." %}</td></tr>{% endfor %}</tbody></table></div>
+<div class="grid g2">
+  <div class="card"><h2>{% trans "Controls I own" %}</h2><table class="t"><tbody>
+  {% for i in controls %}<tr><td class="mono">{{ i.control.ref }}</td><td><a class="lk" href="{% url 'orasec_control' i.control.id %}">{{ i.control.title }}</a></td><td><span class="b b-{{ i.status }}">{{ i.get_status_display }}</span></td><td>{{ i.review_due|date:"j M Y" }}</td></tr>
+  {% empty %}<tr><td class="empty">—</td></tr>{% endfor %}</tbody></table></div>
+  <div class="card"><h2>{% trans "Risks & campaigns I own" %}</h2><table class="t"><tbody>
+  {% for r in risks %}<tr><td class="mono">{{ r.ref }}</td><td><a class="lk" href="{% url 'orasec_risk' r.id %}">{{ r.title }}</a></td><td>{{ r.get_status_display }}</td><td>{{ r.review_date|date:"j M Y" }}</td></tr>{% endfor %}
+  {% for c in campaigns %}<tr><td class="mono">{% trans "campaign" %}</td><td>{{ c.name }}</td><td>{{ c.get_status_display }}</td><td>{{ c.target_date|date:"j M Y" }}</td></tr>{% endfor %}
+  {% if not risks and not campaigns %}<tr><td class="empty">—</td></tr>{% endif %}</tbody></table></div>
+</div>
+<div class="card" style="margin-top:1rem"><h2>{% trans "My risk-acceptance requests" %}</h2><table class="t"><tbody>
+{% for a in my_requests %}<tr><td><a class="lk" href="{% url 'orasec_risk_acceptances' %}">{{ a.risk_acceptance.name }}</a></td><td><span class="b b-{{ a.status }}">{{ a.get_status_display }}</span></td><td class="muted">{{ a.decided_by|default:"" }} {{ a.decision_note|truncatechars:80 }}</td></tr>
+{% empty %}<tr><td class="empty">—</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}
+

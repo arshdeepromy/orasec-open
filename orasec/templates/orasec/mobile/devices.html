@@ -1,0 +1,55 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Mobile app" %} | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr">
+  <div><h1>{% trans "OraSec mobile app" %}</h1>
+    <div class="sub">{% trans "Link your phone to see the dashboard, vulnerabilities, attacks and risks on the go. Each phone gets its own sign-in that you can revoke here at any time." %}</div></div>
+</div>
+
+<div class="grid g2">
+  <div class="card">
+    <h2>{% trans "Link a phone" %}</h2>
+    {% if code %}
+      <p class="muted" style="margin:.2rem 0 .8rem">{% trans "Open the OraSec app and enter this code. It works once and expires in 10 minutes." %}</p>
+      <div data-ora="link-code" style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:2.1rem;font-weight:700;letter-spacing:.12em;padding:.8rem 1rem;border:1px dashed var(--teal-b);border-radius:12px;text-align:center;background:var(--teal-l);color:#004740" id="link-code">{{ code }}</div>
+      <p class="muted" style="font-size:.8rem;margin-top:.6rem">{% blocktrans with t=code_expires|time:"H:i" %}Valid until {{ t }}. Creating a new code cancels this one.{% endblocktrans %}</p>
+      <p class="muted" style="font-size:.8rem;margin-top:.3rem">{% trans "Never share this code. Your security team will never ask you for it." %}</p>
+    {% else %}
+      <ol style="margin:.2rem 0 1rem 1.1rem;font-size:.9rem;line-height:1.7">
+        <li>{% trans "Install the OraSec app (Google Play internal testing or TestFlight)." %}</li>
+        <li>{% trans "Create a link code here." %}</li>
+        <li>{% trans "Enter the code in the app, then turn on Face ID / fingerprint lock." %}</li>
+      </ol>
+    {% endif %}
+    <form method="post" action="{% url 'orasec_mobile_new_code' %}">{% csrf_token %}
+      <button class="btn btn-p" type="submit"><i class="fa-solid fa-mobile-screen-button"></i> {% if code %}{% trans "Create a new code" %}{% else %}{% trans "Create a link code" %}{% endif %}</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>{% trans "Linked phones" %}</h2>
+    {% if active %}
+    <table class="t">
+      <thead><tr><th>{% trans "Phone" %}</th>{% if request.user.is_superuser %}<th>{% trans "User" %}</th>{% endif %}<th>{% trans "Linked" %}</th><th>{% trans "Last used" %}</th><th></th></tr></thead>
+      <tbody>
+      {% for d in active %}
+        <tr><td><i class="fa-brands fa-{% if d.platform == 'ios' %}apple{% else %}android{% endif %} muted"></i> {{ d.name }}<div class="muted" style="font-size:.75rem">{{ d.app_version|default:"" }}</div></td>
+          {% if request.user.is_superuser %}<td>{{ d.user.username }}</td>{% endif %}
+          <td>{{ d.created|date:"j M Y" }}</td><td>{{ d.last_seen|timesince }} {% trans "ago" %}<div class="muted mono">{{ d.last_ip|default:"" }}</div></td>
+          <td class="num"><form method="post" action="{% url 'orasec_mobile_revoke' d.id %}" onsubmit="return confirm('{% trans "Sign this phone out of the OraSec app?" %}')">{% csrf_token %}
+            <button class="btn btn-d" type="submit">{% trans "Sign out" %}</button></form></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty">{% trans "No phones linked yet." %}</div>
+    {% endif %}
+    {% if revoked %}
+      <div class="muted" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin:1rem 0 .3rem">{% trans "Signed out" %}</div>
+      {% for d in revoked %}<div class="muted" style="font-size:.82rem">{{ d.name }} · {{ d.revoked_at|date:"j M Y H:i" }}</div>{% endfor %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+

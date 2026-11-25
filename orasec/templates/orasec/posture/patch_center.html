@@ -1,0 +1,31 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Patch Center | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "Patch Center" %}</h1><div class="sub">{% trans "Outstanding updates from PatchMon; deploy them through Semaphore (Ansible, one host at a time, no automatic reboot). Every run is recorded as change evidence (ISO 27001 A.8.8 / A.8.19 / A.8.32)." %}</div></div>
+<div style="display:flex;gap:.4rem">{% if patchmon %}<a class="btn" href="{% url 'orasec_connector_detail' patchmon.id %}">PatchMon</a>{% endif %}{% if connector %}<a class="btn" href="{% url 'orasec_connector_detail' connector.id %}">Semaphore</a>{% endif %}</div></div>
+{% if not connector %}<div class="card empty">{% trans "Add a Semaphore connector to enable patch deployment." %} <a class="lk" href="{% url 'orasec_connector_new' %}?kind=semaphore">{% trans "Add connector" %}</a></div>{% else %}
+<div class="card">
+<table class="t"><thead><tr><th>{% trans "Host" %}</th><th>{% trans "Group" %}</th><th>OS</th><th class="num">{% trans "Security updates" %}</th><th class="num">{% trans "All updates" %}</th><th>{% trans "Reboot" %}</th><th>{% trans "Last run" %}</th><th style="width:360px">{% trans "Deploy" %}</th></tr></thead><tbody>
+{% for a in assets %}
+<tr><td><a class="lk" href="{% url 'orasec_asset' a.id %}"><b>{{ a.name }}</b></a><div class="muted mono" style="font-size:.72rem">{{ a.patch_host }} · {{ a.ip_address }}</div></td>
+<td>{{ a.patch_group }}{% if a.patch_production %} <span class="b b-High">{% trans "production" %}</span>{% endif %}</td>
+<td style="font-size:.82rem">{{ a.os_name }} {{ a.os_version }}</td>
+<td class="num">{% if a.pm_security %}<span class="b b-High">{{ a.pm_security }}</span>{% elif a.pm_security == 0 %}0{% else %}—{% endif %}</td>
+<td class="num">{{ a.pm_updates|default_if_none:"—" }}</td><td>{% if a.pm_reboot %}<span class="b b-warn">{% trans "required" %}</span>{% endif %}</td>
+<td>{% if a.last_deploy %}<a class="lk" href="{% url 'orasec_patch_deployment' a.last_deploy.id %}"><span class="b b-{{ a.last_deploy.status }}">{{ a.last_deploy.get_status_display }}</span></a><div class="muted" style="font-size:.72rem">{{ a.last_deploy.created|date:"j M H:i" }}</div>{% else %}—{% endif %}</td>
+<td>{% if request.user.is_superuser %}
+<form method="post" action="{% url 'orasec_patch_deploy' a.id %}" style="display:flex;gap:.3rem;flex-wrap:wrap;align-items:center">{% csrf_token %}
+<select name="mode" style="border:1px solid #ebe7de;border-radius:6px;padding:.25rem;font-size:.8rem"><option value="apply">{% trans "Apply updates" %}</option><option value="check">{% trans "Check only" %}</option></select>
+{% if a.patch_production %}<input name="change_ref" required placeholder="{% trans 'Change ref' %}" style="border:1px solid #ebe7de;border-radius:6px;padding:.25rem .4rem;font-size:.8rem;width:100px">{% endif %}
+<label style="font-size:.75rem"><input type="checkbox" name="confirm" value="yes" required> {% trans "confirm" %}</label>
+<button class="btn btn-p" style="padding:.3rem .6rem"><i class="fa-solid fa-rocket"></i> {% trans "Deploy" %}</button></form>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="8" class="empty">{% trans "No hosts from the Semaphore inventory yet — run the Semaphore connector." %}</td></tr>{% endfor %}</tbody></table></div>
+{% endif %}
+<div class="card" style="margin-top:1rem"><h2>{% trans "Patch run history" %}</h2>
+<table class="t"><thead><tr><th>{% trans "When" %}</th><th>{% trans "Host" %}</th><th>{% trans "Mode" %}</th><th>{% trans "Status" %}</th><th>{% trans "By" %}</th><th>{% trans "Change" %}</th><th>{% trans "Result" %}</th></tr></thead><tbody>
+{% for d in deployments %}<tr><td><a class="lk" href="{% url 'orasec_patch_deployment' d.id %}">{{ d.created|date:"j M Y H:i" }}</a></td><td>{{ d.inventory_host }}</td><td>{{ d.get_mode_display }}</td>
+<td><span class="b b-{{ d.status }}">{{ d.get_status_display }}</span></td><td>{{ d.requested_by|default:"—" }}</td><td class="mono">{{ d.change_ref|default:"—" }}</td><td class="mono" style="font-size:.75rem">{{ d.summary|truncatechars:120 }}</td></tr>
+{% empty %}<tr><td colspan="7" class="empty">{% trans "No patch runs yet." %}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}
+

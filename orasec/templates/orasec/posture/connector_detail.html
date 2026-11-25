@@ -1,0 +1,35 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{{ c.name }} | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr">
+  <div><h1>{{ c.name }}</h1><div class="sub">{{ c.get_kind_display }} · <span class="mono">{{ c.base_url }}</span> · {% trans "every" %} {{ c.interval_minutes }} min{% if not c.enabled %} · <b>{% trans "disabled" %}</b>{% endif %}</div></div>
+  {% if request.user.is_superuser %}
+  <div style="display:flex;gap:.5rem">
+    <form method="post" action="{% url 'orasec_connector_test' c.id %}">{% csrf_token %}<button class="btn"><i class="fa-solid fa-plug-circle-check"></i> {% trans "Test connection" %}</button></form>
+    <form method="post" action="{% url 'orasec_connector_run' c.id %}">{% csrf_token %}<button class="btn btn-p"><i class="fa-solid fa-play"></i> {% trans "Run now" %}</button></form>
+    <a class="btn" href="{% url 'orasec_connector_edit' c.id %}"><i class="fa-solid fa-pen"></i> {% trans "Edit" %}</a>
+  </div>
+  {% endif %}
+</div>
+<div class="grid g4">
+  <div class="card kpi"><div class="l">{% trans "Status" %}</div><div class="v"><span class="b b-{{ c.last_status }}" style="font-size:1rem">{{ c.get_last_status_display }}</span></div><div class="d">{{ c.last_message|truncatechars:140 }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Last success" %}</div><div class="v" style="font-size:1.1rem">{{ c.last_success_at|date:"j M H:i"|default:"—" }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Findings to" %}</div><div class="v" style="font-size:1.1rem">{{ c.product.name|default:"auto (per option)" }}</div><div class="d">{{ c.engagement_name }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "TLS verification" %}</div><div class="v" style="font-size:1.1rem">{{ c.verify_tls|yesno:"On,Off (LAN self-signed)" }}</div></div>
+</div>
+{% if last and last.stats.imports %}
+<div class="card" style="margin-top:1rem"><h2>{% trans "Last run imports" %}</h2>
+<table class="t"><thead><tr><th>{% trans "Test" %}</th><th class="num">{% trans "New" %}</th><th class="num">{% trans "Closed" %}</th><th class="num">{% trans "Reactivated" %}</th><th class="num">{% trans "Unchanged" %}</th></tr></thead><tbody>
+{% for i in last.stats.imports %}<tr><td><a class="lk" href="{% url 'view_test' i.test_id %}">{{ i.test }}</a></td><td class="num">{{ i.new }}</td><td class="num">{{ i.closed }}</td><td class="num">{{ i.reactivated }}</td><td class="num">{{ i.untouched }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
+<div class="card" style="margin-top:1rem"><h2>{% trans "Run history" %}</h2>
+<table class="t"><thead><tr><th>{% trans "Started" %}</th><th>{% trans "Trigger" %}</th><th>{% trans "Status" %}</th><th class="num">{% trans "Duration" %}</th><th class="num">{% trans "New" %}</th><th class="num">{% trans "Closed" %}</th><th>{% trans "Error" %}</th></tr></thead><tbody>
+{% for r in runs %}
+<tr><td><a class="lk" href="{% url 'orasec_run' r.id %}">{{ r.started_at|date:"j M Y H:i:s" }}</a></td><td>{{ r.triggered_by }}</td><td><span class="b b-{{ r.status }}">{{ r.status }}</span></td>
+<td class="num">{{ r.duration_seconds|default:"—" }}s</td><td class="num">{{ r.stats.findings_new|default:"—" }}</td><td class="num">{{ r.stats.findings_closed|default:"—" }}</td><td class="muted">{{ r.error|truncatechars:90 }}</td></tr>
+{% empty %}<tr><td colspan="7" class="empty">{% trans "Not run yet." %}</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}
+

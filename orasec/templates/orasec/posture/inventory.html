@@ -1,0 +1,38 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Asset Inventory | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "Asset Inventory" %}</h1><div class="sub">{% trans "Correlated from Wazuh, OPNsense, UniFi and PatchMon (by MAC address and hostname). ISO 27001 A.5.9." %}</div></div></div>
+<div class="grid g4" style="margin-bottom:1rem">
+  {% for k, label in types %}{% for t, n in counts.items %}{% if t == k %}
+  <a class="card kpi" style="text-decoration:none" href="?type={{ k }}"><div class="l">{{ label }}</div><div class="v">{{ n }}</div></a>
+  {% endif %}{% endfor %}{% endfor %}
+</div>
+<form class="filters" method="get">
+  <input name="q" value="{{ request.GET.q }}" placeholder="{% trans 'Name, hostname, IP or MAC' %}">
+  <select name="type"><option value="">{% trans "All types (excl. clients)" %}</option>{% for k, l in types %}<option value="{{ k }}" {% if request.GET.type == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <label style="font-size:.85rem"><input type="checkbox" name="retired" value="1" {% if request.GET.retired %}checked{% endif %}> {% trans "include retired" %}</label>
+  <button class="btn">{% trans "Filter" %}</button>
+</form>
+<div class="card">
+<table class="t">
+<thead><tr><th>{% trans "Asset" %}</th><th>{% trans "Type" %}</th><th>IP</th><th>{% trans "OS / firmware" %}</th><th>{% trans "Sources" %}</th><th>{% trans "Online" %}</th><th class="num">{% trans "Open findings" %}</th><th>{% trans "Criticality" %}</th><th>{% trans "Last seen" %}</th></tr></thead>
+<tbody>
+{% for a in page %}
+<tr>
+  <td><a class="lk" href="{% url 'orasec_asset' a.id %}"><b>{{ a.name }}</b></a>{% if a.parent %}<div class="muted" style="font-size:.75rem">↳ {{ a.parent.name }}</div>{% endif %}{% if a.internet_exposed %} <span class="b b-High">{% trans "internet" %}</span>{% endif %}</td>
+  <td>{{ a.get_asset_type_display }}</td>
+  <td class="mono">{{ a.ip_address|default:"—" }}</td>
+  <td style="font-size:.82rem">{{ a.os_name }} {{ a.os_version }}{% if a.firmware and a.firmware != a.os_version %} · fw {{ a.firmware }}{% endif %}{% if a.model %}<div class="muted">{{ a.vendor }} {{ a.model }}</div>{% endif %}</td>
+  <td>{% for s in a.source_kinds %}<span class="b b-muted">{{ s }}</span> {% endfor %}</td>
+  <td>{% if a.online is None %}—{% elif a.online %}<span class="b b-ok">{% trans "yes" %}</span>{% else %}<span class="b b-fail">{% trans "no" %}</span>{% endif %}</td>
+  <td class="num">{{ a.open_findings|default:"0" }}</td>
+  <td>{{ a.criticality }}/5</td>
+  <td class="muted" style="font-size:.8rem">{{ a.last_seen|timesince }} ago</td>
+</tr>
+{% empty %}<tr><td colspan="9" class="empty">{% trans "No assets yet. Assets appear after the first connector run." %}</td></tr>{% endfor %}
+</tbody></table>
+{% if page.has_other_pages %}<div style="margin-top:.8rem">{% if page.has_previous %}<a class="btn" href="?{{ request.GET.urlencode }}&page={{ page.previous_page_number }}">←</a>{% endif %} {{ page.number }} / {{ page.paginator.num_pages }} {% if page.has_next %}<a class="btn" href="?{{ request.GET.urlencode }}&page={{ page.next_page_number }}">→</a>{% endif %}</div>{% endif %}
+</div>
+{% endblock %}
+

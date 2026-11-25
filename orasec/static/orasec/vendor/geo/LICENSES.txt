@@ -1,0 +1,6 @@
+Third-party assets bundled with OraSec (served locally, no CDN):
+- d3 7.9.2 (ISC) https://d3js.org - Copyright 2010-2023 Mike Bostock
+- topojson-client 3.1.0 (ISC) - Copyright 2012-2019 Michael Bostock
+- world-atlas 2.0.2 (ISC), derived from Natural Earth 1:110m (public domain)
+- countries.json derived from i18n-iso-countries 7.14.0 (MIT)
+- GeoIP: DB-IP Lite country and ASN databases (CC BY 4.0) https://db-ip.com - IP geolocation by DB-IP

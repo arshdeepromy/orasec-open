@@ -1,0 +1,9 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{% if obj %}{{ obj.ref }}{% else %}New risk{% endif %} | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% if obj %}{{ obj.ref }} {{ obj.title }}{% else %}{% trans "New risk" %}{% endif %}</h1><div class="sub">{% trans "Score = likelihood × impact (1–25). Bands (POL-002): 20–25 Critical, 12–19 High, 6–11 Medium, 1–5 Low." %}</div></div>
+<a class="btn" href="{% url 'orasec_risks' %}">← {% trans "Register" %}</a></div>
+<form method="post" class="card f" style="max-width:820px">{% csrf_token %}{{ form.as_p }}<button class="btn btn-p">{% trans "Save" %}</button></form>
+{% endblock %}
+

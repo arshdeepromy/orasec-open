@@ -1,0 +1,27 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{{ s.ref }} {{ s.name }} | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}
+<div class="hdr"><div><h1>{{ s.ref }} {{ s.name }}</h1><div class="sub"><span class="b b-{{ s.tier }}">{{ s.get_tier_display }}</span> <span class="b b-{{ s.status }}">{{ s.get_status_display }}</span>
+ · {% if s.tier == "critical" %}{% trans "Approval: two people who are not the requester or assessor; full due diligence every year." %}{% else %}{% trans "Approval: one person who is not the assessor or requester; reviewed every year." %}{% endif %}</div></div>
+<div style="display:flex;gap:.4rem" class="noprint"><a class="btn" href="{% url 'orasec_suppliers' %}">← {% trans "Register" %}</a>
+{% if can_compliance %}<a class="btn" href="{% url 'orasec_supplier_edit' s.id %}">{% trans "Edit" %}</a><a class="btn btn-p" href="{% url 'orasec_supplier_assess' s.id %}"><i class="fa-solid fa-clipboard-check"></i> {% trans "New assessment" %}</a>{% endif %}
+{% if can_request %}<a class="btn" href="{% url 'orasec_exception_new' %}?supplier={{ s.id }}">{% trans "Request exception" %}</a>{% endif %}</div></div>
+<div class="grid g2">
+<div class="card"><h2>{% trans "Supplier" %}</h2><dl class="kv">
+<dt>{% trans "Service" %}</dt><dd>{{ s.service }}</dd><dt>{% trans "Used by" %}</dt><dd>{{ s.products|default:"—" }}</dd>
+<dt>{% trans "Data shared" %}</dt><dd>{{ s.data_shared|default:"—" }} ({{ s.get_classification_display }})</dd>
+<dt>{% trans "Personal information" %}</dt><dd>{{ s.personal_information|yesno:"Yes,No" }}</dd><dt>{% trans "Data location" %}</dt><dd>{{ s.data_location|default:"—" }}</dd>
+<dt>{% trans "Assurance" %}</dt><dd>{{ s.assurance|default:"—" }}{% if s.assurance_expiry %} ({% trans "valid to" %} {{ s.assurance_expiry|date:"j M Y" }}){% endif %}</dd>
+<dt>{% trans "Contract / terms" %}</dt><dd>{{ s.contract|default:"—" }}</dd><dt>{% trans "Breach notice ≤24h" %}</dt><dd>{{ s.breach_notification|yesno:"Confirmed,Not confirmed" }}</dd>
+<dt>{% trans "Owner" %}</dt><dd>{{ s.owner.get_full_name|default:"—" }}</dd><dt>{% trans "Last / next review" %}</dt><dd>{{ s.last_review|date:"j M Y"|default:"—" }} / {{ s.next_review|date:"j M Y"|default:"—" }}</dd>
+{% if s.notes %}<dt>{% trans "Notes" %}</dt><dd>{{ s.notes }}</dd>{% endif %}</dl></div>
+<div class="card"><h2>{% trans "Assessments" %}</h2><table class="t"><thead><tr><th>Ref</th><th>{% trans "Type" %}</th><th>{% trans "Date" %}</th><th class="num">{% trans "Risk" %}</th><th>{% trans "Status" %}</th></tr></thead><tbody>
+{% for a in assessments %}<tr><td class="mono"><a class="lk" href="{% url 'orasec_supplier_assessment' a.id %}">{{ a.ref }}</a></td><td>{{ a.get_kind_display }}</td><td>{{ a.assessed_on|date:"j M Y" }}</td><td class="num"><span class="b b-{{ a.band }}">{{ a.score }}</span></td><td><span class="b b-{{ a.status }}">{{ a.get_status_display }}</span></td></tr>
+{% empty %}<tr><td colspan="5" class="empty">{% trans "No assessment yet." %}</td></tr>{% endfor %}</tbody></table>
+{% if risks %}<h2 style="margin-top:1rem">{% trans "Linked risks" %}</h2>{% for r in risks %}<div><a class="lk" href="{% url 'orasec_risk' r.id %}">{{ r.ref }} {{ r.title }}</a></div>{% endfor %}{% endif %}
+{% if exceptions %}<h2 style="margin-top:1rem">{% trans "Exceptions" %}</h2>{% for e in exceptions %}<div><a class="lk" href="{% url 'orasec_exception' e.id %}">{{ e.ref }} {{ e.title }}</a> <span class="b b-{{ e.status }}">{{ e.get_status_display }}</span></div>{% endfor %}{% endif %}
+</div></div>
+{% endblock %}
+

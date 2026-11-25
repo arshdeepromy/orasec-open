@@ -1,0 +1,35 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Change Register | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}{% include "orasec/posture/_change_styles.html" %}
+<div class="hdr"><div><h1>{% trans "Change Register" %}</h1><div class="sub">{% trans "Every ISMS change and every IT change — firewall, network, hosting, servers, releases, security tools, access and suppliers. Raised, approved by someone else, done, then reviewed (ISO 27001 6.3 and A.8.32; FWK-001 8.4, PRC-003, REG-010)." %}</div></div>
+<div style="display:flex;gap:.4rem" class="noprint"><a class="btn" href="{% url 'orasec_grc' %}">{% trans "GRC Dashboard" %}</a>
+{% if can_raise %}<a class="btn btn-p" href="{% url 'orasec_change_new' %}"><i class="fa-solid fa-plus"></i> {% trans "Raise a change" %}</a>{% endif %}</div></div>
+
+<div class="grid g4" style="margin-bottom:1rem">
+  <div class="card kpi"><div class="l">{% trans "Awaiting approval" %}</div><div class="v">{{ kpi.awaiting_approval }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Approved, not done yet" %}</div><div class="v">{{ kpi.approved }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Done, awaiting review" %}</div><div class="v">{{ kpi.awaiting_review }}</div></div>
+  <div class="card kpi"><div class="l">{% trans "Overdue" %}</div><div class="v{% if kpi.overdue %} late{% endif %}">{{ kpi.overdue }}</div><div class="d">{{ kpi.year }} {% trans "changes in the last 12 months" %}</div></div>
+</div>
+
+<div class="chg-filter noprint">
+  <a href="?{% if category %}category={{ category }}{% endif %}" class="{% if not status %}on{% endif %}">{% trans "All" %}</a>
+  <a href="?status=open{% if category %}&category={{ category }}{% endif %}" class="{% if status == 'open' %}on{% endif %}">{% trans "Open" %}</a>
+  <a href="?status=closed{% if category %}&category={{ category }}{% endif %}" class="{% if status == 'closed' %}on{% endif %}">{% trans "Closed" %}</a>
+  <span style="width:.6rem"></span>
+  <a href="?{% if status %}status={{ status }}{% endif %}" class="{% if not category %}on{% endif %}">{% trans "Every type" %}</a>
+  {% for k, label in categories %}<a href="?category={{ k }}{% if status %}&status={{ status }}{% endif %}" class="{% if category == k %}on{% endif %}">{{ label|truncatechars:34 }}</a>{% endfor %}
+</div>
+
+<div class="card"><table class="t"><thead><tr><th>Ref</th><th>{% trans "Title" %}</th><th>{% trans "Area" %}</th><th>{% trans "Type" %}</th><th>{% trans "Risk" %}</th><th>{% trans "Raised by" %}</th><th>{% trans "Approved by" %}</th><th>{% trans "Done" %}</th><th>{% trans "Status" %}</th></tr></thead><tbody>
+{% for c in items %}<tr><td class="mono">{{ c.ref }}</td><td><a class="lk" href="{% url 'orasec_change' c.id %}">{{ c.title }}</a></td>
+<td>{{ c.get_category_display|truncatechars:30 }}</td><td>{{ c.get_change_type_display }}</td><td><span class="b r-{{ c.risk_level }}">{{ c.get_risk_level_display }}</span></td>
+<td>{% firstof c.requested_by.get_full_name c.requested_by.username "—" %}</td>
+<td>{% if c.approved_by %}{% firstof c.approved_by.get_full_name c.approved_by.username "—" %}{% elif c.approval_overdue %}<span class="late">{% trans "overdue" %}</span>{% else %}—{% endif %}</td>
+<td>{{ c.implemented_at|date:"j M Y"|default:"—" }}</td>
+<td><span class="b c-{{ c.status }}">{{ c.get_status_display }}</span>{% if c.review_overdue %} <span class="late">{% trans "review overdue" %}</span>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="9" class="empty">{% trans "No changes recorded." %}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}
+

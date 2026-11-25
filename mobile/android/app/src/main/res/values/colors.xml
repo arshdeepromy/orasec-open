@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Native chrome only (dialogs drawn by plugins); the app itself is styled by CSS variables. -->
+    <color name="colorPrimary">#0D1514</color>
+    <color name="colorPrimaryDark">#0D1514</color>
+    <color name="colorAccent">#00A890</color>
+    <!-- Tint of the push notification icon / accent in the shade. -->
+    <color name="notification_accent">#00A890</color>
+    <!-- Android 12+ system splash: matches the icon tile so the circle blends in -->
+    <color name="splash_background">#0D1514</color>
+</resources>

@@ -1,0 +1,30 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Remediation Center | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "Remediation Center" %}</h1><div class="sub">{% trans "Root causes: the single fix that clears the most risk, ranked by impact. Track fixes across every affected place with campaigns." %}</div></div>
+<form method="get" class="filters" style="margin:0"><select name="product" onchange="this.form.submit()"><option value="">{% trans "All assets" %}</option>{% for p in products %}<option value="{{ p.id }}" {% if product_id == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></form></div>
+
+{% if campaigns %}
+<div class="card" style="margin-bottom:1rem"><h2>{% trans "Campaigns" %}</h2>
+<table class="t"><thead><tr><th>{% trans "Campaign" %}</th><th>{% trans "Root cause" %}</th><th>{% trans "Owner" %}</th><th>{% trans "Target" %}</th><th>{% trans "Status" %}</th><th style="width:220px">{% trans "Progress" %}</th></tr></thead><tbody>
+{% for c in campaigns %}<tr><td><b>{{ c.name }}</b>{% if c.product %}<div class="muted" style="font-size:.75rem">{{ c.product.name }}</div>{% endif %}</td><td class="mono">{{ c.component }}</td><td>{{ c.owner|default:"—" }}</td>
+<td>{{ c.target_date|date:"j M Y"|default:"—" }}</td><td><span class="b b-{{ c.status }}">{{ c.get_status_display }}</span></td>
+<td><div class="bar"><span style="width:{{ c.progress }}%"></span></div><div class="muted" style="font-size:.75rem">{{ c.progress }}% · {{ c.open_now }} {% trans "of" %} {{ c.baseline_open }} {% trans "still open" %}</div></td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
+
+<div class="card"><h2>{% trans "Root causes" %}</h2>
+<table class="t"><thead><tr><th>{% trans "Component" %}</th><th class="num">{% trans "Impact" %}</th><th class="num">{% trans "Findings" %}</th><th class="num">Urgent</th><th class="num">KEV</th><th class="num">Crit</th><th class="num">High</th><th class="num">{% trans "Hosts" %}</th><th>{% trans "Fix version" %}</th><th>{% trans "Deadline" %}</th><th></th></tr></thead><tbody>
+{% for r in roots %}
+<tr><td class="mono"><a class="lk" href="{% url 'orasec_vulnerabilities' %}?q={{ r.component_name|urlencode }}">{{ r.component_name }}</a></td><td class="num"><b>{{ r.impact }}</b></td><td class="num">{{ r.findings }}</td><td class="num">{{ r.urgent }}</td>
+<td class="num">{% if r.kev %}<span class="b b-kev">{{ r.kev }}</span>{% else %}0{% endif %}</td><td class="num">{{ r.critical }}</td><td class="num">{{ r.high }}</td><td class="num">{{ r.hosts }}</td>
+<td class="mono">{{ r.fix|default:"—" }}</td><td>{{ r.earliest_due|date:"j M Y"|default:"—" }}</td>
+<td>{% if form %}<button class="btn" type="button" onclick="document.getElementById('id_component').value='{{ r.component_name|escapejs }}';document.getElementById('id_name').value='Update {{ r.component_name|escapejs }}';document.getElementById('newc').scrollIntoView()">{% trans "Campaign" %}</button>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="11" class="empty">{% trans "No open findings with an identified component." %}</td></tr>{% endfor %}</tbody></table></div>
+
+{% if form %}
+<form method="post" class="card f" id="newc" style="margin-top:1rem;max-width:720px">{% csrf_token %}<h2>{% trans "New remediation campaign" %}</h2>{{ form.as_p }}<button class="btn btn-p">{% trans "Create campaign" %}</button></form>
+{% endif %}
+{% endblock %}
+

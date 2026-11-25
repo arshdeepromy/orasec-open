@@ -1,0 +1,154 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Ora assistant" %} | OraSec{% endblock %}
+{% block posture %}
+<style>
+  .ora-set .row { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:.75rem 1rem; }
+  .ora-set label { display:block; font-weight:600; font-size:.82rem; margin-bottom:.25rem; }
+  .ora-set input[type=text], .ora-set input[type=password], .ora-set input[type=number], .ora-set select, .ora-set textarea {
+    width:100%; border:1px solid var(--line); border-radius:7px; padding:.42rem .6rem; font-size:.86rem; background:#fff; }
+  .ora-set textarea { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.78rem; }
+  .ora-set .hint { color:var(--muted); font-size:.75rem; margin-top:.2rem; }
+  .ora-set .chk { display:flex; gap:.5rem; align-items:center; font-weight:600; font-size:.86rem; }
+  .ora-set .prov { display:none; }
+  .ora-set .prov.on { display:block; }
+  .ora-set .set { color:#166534; font-weight:600; font-size:.75rem; }
+  .ora-set .pill { display:inline-block; padding:.12rem .55rem; border-radius:999px; font-size:.72rem; font-weight:700; }
+  .ora-set .pill.on { background:#dcfce7; color:#166534; } .ora-set .pill.off { background:#fbdddd; color:#9f1d17; }
+</style>
+<div class="ora-set">
+<div class="hdr">
+  <div><h1>{% trans "Ora assistant" %}</h1>
+    <div class="sub">{% trans "Connect the AI behind Ora, set limits, and see what people ask. Provider and model names appear only on this page — Ora never tells users what runs it." %}</div></div>
+  <div>{% if cfg.configured and cfg.enabled %}<span class="pill on">{% trans "Live" %}</span>{% elif not cfg.enabled %}<span class="pill off">{% trans "Switched off" %}</span>{% else %}<span class="pill off">{% trans "Not connected" %}</span>{% endif %}</div>
+</div>
+
+<div class="grid g2">
+<form method="post" class="card" autocomplete="off">{% csrf_token %}
+  <input type="hidden" name="action" value="save">
+  <h2>{% trans "Connection" %}</h2>
+  <div class="row">
+    <div><label for="ora-provider">{% trans "Provider" %}</label>
+      <select id="ora-provider" name="provider">{% for k, l in providers %}<option value="{{ k }}" {% if cfg.provider == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div><label for="ora-model">{% trans "Default model" %}</label>
+      {% if model_list %}<select id="ora-model-pick">
+        <option value="">{% trans "Choose a model…" %}</option>
+        {% for m in model_list %}<option value="{{ m.id }}" {% if cfg.model == m.id %}selected{% endif %}>{{ m.name }}{% if m.name != m.id %} — {{ m.id }}{% endif %}</option>{% endfor %}
+        <option value="__other">{% trans "Other (type the id)" %}</option>
+      </select>{% endif %}
+      <input type="text" id="ora-model" name="model" value="{{ cfg.model }}" placeholder="{% trans 'Model id' %}" {% if model_list %}style="margin-top:.4rem"{% endif %}>
+      <div class="hint">{% if model_list %}{% blocktrans count n=model_list|length %}{{ n }} model loaded from the provider.{% plural %}{{ n }} models loaded from the provider.{% endblocktrans %} {% trans "Pick one, then Save." %}{% else %}{% trans "Choose the provider, add the API key and press “Load models”. Vertex AI: type the model id." %}{% endif %}</div>
+      <button class="btn" type="submit" name="action" value="models" style="margin-top:.4rem"><i class="fa-solid fa-list"></i> {% trans "Load models" %}</button></div>
+  </div>
+  <div class="prov" data-for="openai" style="margin-top:.75rem">
+    <label for="ora-base">{% trans "Base URL" %}</label>
+    <input type="text" id="ora-base" name="base_url" value="{{ cfg.base_url }}" placeholder="https://openrouter.ai/api/v1">
+    <div class="hint">{% trans "Any OpenAI-compatible endpoint (OpenRouter, OpenAI, Azure OpenAI, a local Ollama)." %}</div>
+  </div>
+  <div class="prov" data-for="anthropic openai" style="margin-top:.75rem">
+    <label for="ora-key">{% trans "API key" %} {% if cfg.api_key_set %}<span class="set">● {% trans "saved" %}</span>{% endif %}</label>
+    <input type="password" id="ora-key" name="api_key" placeholder="{% if cfg.api_key_set %}{% trans 'Leave blank to keep the saved key' %}{% endif %}">
+    <div class="hint">{% trans "Stored encrypted. Never shown again." %} {% if cfg.api_key_set %}<label class="chk" style="display:inline-flex;margin-left:.5rem"><input type="checkbox" name="clear_api_key" value="1"> {% trans "Remove saved key" %}</label>{% endif %}</div>
+  </div>
+  <div class="prov" data-for="vertex" style="margin-top:.75rem">
+    <div class="row">
+      <div><label for="ora-vp">{% trans "Google Cloud project" %}</label><input type="text" id="ora-vp" name="vertex_project" value="{{ cfg.vertex_project }}"></div>
+      <div><label for="ora-vr">{% trans "Region" %}</label><input type="text" id="ora-vr" name="vertex_region" value="{{ cfg.vertex_region }}"></div>
+    </div>
+    <label for="ora-sa" style="margin-top:.6rem">{% trans "Service account key (JSON)" %} {% if cfg.vertex_service_account_email %}<span class="set">● {{ cfg.vertex_service_account_email }}</span>{% endif %}</label>
+    <textarea id="ora-sa" name="vertex_service_account" rows="4" placeholder="{% trans 'Paste to replace' %}"></textarea>
+  </div>
+  <h2 style="margin-top:1.1rem">{% trans "Limits" %}</h2>
+  <div class="row">
+    <div><label for="ora-rl">{% trans "Questions per minute (per person)" %}</label><input type="number" id="ora-rl" name="rate_limit_per_minute" value="{{ cfg.rate_limit_per_minute }}" min="1" max="200"></div>
+    <div><label for="ora-cap">{% trans "Daily token cap (0 = none)" %}</label><input type="number" id="ora-cap" name="daily_token_cap" value="{{ cfg.daily_token_cap }}" min="0"></div>
+    <div><label for="ora-mo">{% trans "Max answer tokens" %}</label><input type="number" id="ora-mo" name="max_output_tokens" value="{{ cfg.max_output_tokens }}" min="200" max="8000"></div>
+    <div><label for="ora-ret">{% trans "Keep chats for (days)" %}</label><input type="number" id="ora-ret" name="retention_days" value="{{ cfg.retention_days }}" min="1" max="730"></div>
+  </div>
+  <div style="display:flex;gap:1.2rem;flex-wrap:wrap;margin:.9rem 0">
+    <label class="chk"><input type="checkbox" name="enabled" value="1" {% if cfg.enabled %}checked{% endif %}> {% trans "Ora is on" %}</label>
+    <label class="chk"><input type="checkbox" name="memory_enabled" value="1" {% if cfg.memory_enabled %}checked{% endif %}> {% trans "Keep short notes of past chats" %}</label>
+  </div>
+  <div style="display:flex;gap:.5rem">
+    <button class="btn btn-p" type="submit">{% trans "Save" %}</button>
+  </div>
+</form>
+
+<div class="card">
+  <h2>{% trans "Last 30 days" %}</h2>
+  <div class="grid g3" style="gap:.6rem">
+    <div class="kpi"><div class="v">{{ usage.answers }}</div><div class="l">{% trans "Answers" %}</div></div>
+    <div class="kpi"><div class="v">{{ usage.up }} / {{ usage.down }}</div><div class="l">👍 / 👎</div></div>
+    <div class="kpi"><div class="v">{{ usage.unanswered }}</div><div class="l">{% trans "Not answered" %}</div></div>
+    <div class="kpi"><div class="v">{{ usage.calls }}</div><div class="l">{% trans "AI calls" %}</div><div class="d">{{ usage.errors }} {% trans "failed" %}</div></div>
+    <div class="kpi"><div class="v">{{ usage.input|add:usage.output|floatformat:"0g" }}</div><div class="l">{% trans "Tokens" %}</div><div class="d">{% trans "today" %} {{ usage.today_tokens|floatformat:"0g" }}{% if cfg.daily_token_cap %} / {{ cfg.daily_token_cap|floatformat:"0g" }}{% endif %}</div></div>
+    <div class="kpi"><div class="v">{{ usage.off_topic }}</div><div class="l">{% trans "Off-topic" %}</div></div>
+  </div>
+  {% if usage.by_feature %}
+  <table class="t" style="margin-top:.9rem"><thead><tr><th>{% trans "Use" %}</th><th class="num">{% trans "Calls" %}</th><th class="num">{% trans "Tokens in" %}</th><th class="num">{% trans "Tokens out" %}</th></tr></thead><tbody>
+  {% for r in usage.by_feature %}<tr><td>{{ r.feature }}</td><td class="num">{{ r.n }}</td><td class="num">{{ r.i|default:0 }}</td><td class="num">{{ r.o|default:0 }}</td></tr>{% endfor %}
+  </tbody></table>{% endif %}
+  <form method="post" style="margin-top:1rem">{% csrf_token %}<input type="hidden" name="action" value="test">
+    <button class="btn" type="submit"><i class="fa-solid fa-plug-circle-check"></i> {% trans "Test the connection" %}</button></form>
+</div>
+</div>
+
+<div class="card" style="margin-top:1rem">
+  <h2>{% trans "Questions Ora couldn't answer or got a thumbs down" %}</h2>
+  {% if unanswered %}
+  <table class="t"><thead><tr><th>{% trans "Question" %}</th><th>{% trans "Ora said" %}</th><th>{% trans "Why" %}</th><th>{% trans "When" %}</th></tr></thead><tbody>
+  {% for u in unanswered %}<tr><td>{{ u.question }}</td><td class="muted">{{ u.answer|truncatechars:140 }}</td><td><span class="b {% if u.why == 'thumbs down' %}b-fail{% else %}b-warn{% endif %}">{{ u.why }}</span></td><td class="muted" style="white-space:nowrap">{{ u.when|date:"j M H:i" }}</td></tr>{% endfor %}
+  </tbody></table>
+  <div class="hint muted" style="font-size:.8rem;margin-top:.5rem">{% trans "Add a help article below to fill a gap — Ora uses published articles straight away." %}</div>
+  {% else %}<div class="empty">{% trans "Nothing yet." %}</div>{% endif %}
+</div>
+
+<div class="grid g2" style="margin-top:1rem">
+<div class="card">
+  <h2>{% if edit %}{% trans "Edit help article" %}{% else %}{% trans "Add a help article" %}{% endif %}</h2>
+  <form method="post">{% csrf_token %}<input type="hidden" name="action" value="kb_save">{% if edit %}<input type="hidden" name="id" value="{{ edit.id }}">{% endif %}
+    <label for="kb-t">{% trans "Title" %}</label><input type="text" id="kb-t" name="title" value="{{ edit.title|default:'' }}" required>
+    <div class="row" style="margin-top:.6rem">
+      <div><label for="kb-k">{% trans "Keywords (comma separated)" %}</label><input type="text" id="kb-k" name="keywords" value="{{ edit.keywords|join:', ' }}"></div>
+      <div><label for="kb-p">{% trans "Page path (optional)" %}</label><input type="text" id="kb-p" name="path" value="{{ edit.path|default:'' }}" placeholder="/orasec/risks/"></div>
+    </div>
+    <label for="kb-b" style="margin-top:.6rem">{% trans "Text" %}</label><textarea id="kb-b" name="body" rows="6" required style="font-family:inherit;font-size:.86rem">{{ edit.body|default:'' }}</textarea>
+    <div style="display:flex;gap:.6rem;align-items:center;margin-top:.6rem">
+      <select name="status" style="width:auto">
+        <option value="draft" {% if edit.status == 'draft' %}selected{% endif %}>{% trans "Draft" %}</option>
+        <option value="published" {% if not edit or edit.status == 'published' %}selected{% endif %}>{% trans "Published" %}</option>
+        <option value="archived" {% if edit.status == 'archived' %}selected{% endif %}>{% trans "Archived" %}</option></select>
+      <button class="btn btn-p" type="submit">{% trans "Save article" %}</button>
+      {% if edit %}<a class="btn" href="{% url 'orasec_ora_settings' %}">{% trans "Cancel" %}</a>{% endif %}
+    </div>
+  </form>
+</div>
+<div class="card">
+  <h2>{% trans "Help articles" %}</h2>
+  <table class="t"><tbody>
+  {% for a in articles %}<tr><td><a class="lk" href="?kb={{ a.id }}">{{ a.title }}</a></td><td><span class="b {% if a.status == 'published' %}b-ok{% else %}b-muted{% endif %}">{{ a.status }}</span></td>
+    <td class="num"><form method="post" style="display:inline">{% csrf_token %}<input type="hidden" name="action" value="kb_delete"><input type="hidden" name="id" value="{{ a.id }}"><button class="btn btn-d" type="submit" style="padding:.15rem .5rem" onclick="return confirm('Delete this article?')">{% trans "Delete" %}</button></form></td></tr>{% endfor %}
+  {% for a in builtin %}<tr><td>{{ a.title }}</td><td><span class="b b-muted">{% trans "built in" %}</span></td><td></td></tr>{% endfor %}
+  </tbody></table>
+</div>
+</div>
+</div>
+<script>
+(function () {
+  var sel = document.getElementById('ora-provider');
+  function sync() { document.querySelectorAll('.ora-set .prov').forEach(function (el) {
+    el.classList.toggle('on', el.getAttribute('data-for').split(' ').indexOf(sel.value) >= 0); }); }
+  sel.addEventListener('change', sync); sync();
+  var pick = document.getElementById('ora-model-pick'), box = document.getElementById('ora-model');
+  if (pick && box) {
+    var known = Array.prototype.some.call(pick.options, function (o) { return o.value && o.value !== '__other' && o.value === box.value; });
+    if (!box.value || known) { box.style.display = 'none'; } else { pick.value = '__other'; }
+    pick.addEventListener('change', function () {
+      if (pick.value === '__other') { box.style.display = ''; box.value = ''; box.focus(); }
+      else { box.style.display = 'none'; box.value = pick.value; }
+    });
+  }
+})();
+</script>
+{% endblock %}
+

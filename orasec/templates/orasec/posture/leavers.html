@@ -1,0 +1,16 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Leavers and movers | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "Leavers and movers" %}</h1><div class="sub">{% trans "Return of assets and removal of access. ISO/IEC 27001 A.5.11, A.5.18, A.6.5 · PRC-001 / FRM-002. Deactivating an account opens a record automatically." %}</div></div></div>
+{% if request.user.is_superuser %}
+<form class="filters card" method="post" action="{% url 'orasec_leaver_start' %}">{% csrf_token %}<input type="hidden" name="action" value="start">
+  <select name="person" required><option value="">{% trans "Person" %}</option>{% for u in people %}<option value="{{ u.id }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select>
+  <select name="kind"><option value="leaver">{% trans "Leaver" %}</option><option value="mover">{% trans "Mover (role change)" %}</option></select>
+  <input type="date" name="leaving_date"><input name="reason" placeholder="{% trans 'Reason (optional)' %}">
+  <button class="btn btn-p">{% trans "Start record" %}</button></form>
+{% endif %}
+<div class="card"><table class="t"><thead><tr><th>Ref</th><th>{% trans "Person" %}</th><th>{% trans "Type" %}</th><th>{% trans "Leaving" %}</th><th>{% trans "Due" %}</th><th>{% trans "Checklist" %}</th><th>{% trans "Status" %}</th><th>{% trans "Signed off by" %}</th></tr></thead><tbody>
+{% for r in items %}<tr><td><a class="lk" href="{% url 'orasec_leaver' r.id %}">{{ r.ref }}</a></td><td>{{ r.person.get_full_name|default:r.person.username }}</td><td>{{ r.get_kind_display }}</td><td>{{ r.leaving_date }}</td><td>{{ r.due_date }}{% if r.overdue %} <span class="b b-fail">{% trans "overdue" %}</span>{% endif %}</td><td>{{ r.done_count }}/{{ r.steps|length }}</td><td>{{ r.get_status_display }}</td><td>{% if r.signed_off_by %}{{ r.signed_off_by.get_full_name|default:r.signed_off_by.username }}{% else %}—{% endif %}</td></tr>
+{% empty %}<tr><td colspan="8" class="empty">{% trans "No leavers or movers yet." %}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Connectors | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr">
+  <div><h1>{% trans "Connectors" %}</h1><div class="sub">{% trans "Scheduled API integrations that pull findings and assets into OraSec. Credentials are stored encrypted." %}</div></div>
+  {% if request.user.is_superuser %}<a class="btn btn-p" href="{% url 'orasec_connector_new' %}"><i class="fa-solid fa-plus"></i> {% trans "Add connector" %}</a>{% endif %}
+</div>
+<div class="card">
+<table class="t">
+  <thead><tr><th>{% trans "Name" %}</th><th>{% trans "Type" %}</th><th>{% trans "Target" %}</th><th>{% trans "Schedule" %}</th><th>{% trans "Status" %}</th><th>{% trans "Last result" %}</th><th>{% trans "Last success" %}</th></tr></thead>
+  <tbody>
+  {% for c in connectors %}
+    <tr>
+      <td><a class="lk" href="{% url 'orasec_connector_detail' c.id %}"><b>{{ c.name }}</b></a>{% if not c.enabled %} <span class="b b-muted">{% trans "disabled" %}</span>{% endif %}</td>
+      <td>{{ c.get_kind_display }}</td>
+      <td class="mono">{{ c.base_url }}</td>
+      <td>{% trans "every" %} {{ c.interval_minutes }} min</td>
+      <td><span class="b b-{{ c.last_status }}">{{ c.get_last_status_display }}</span></td>
+      <td style="max-width:420px">{{ c.last_message|truncatechars:160 }}</td>
+      <td class="muted">{% if c.last_success_at %}{{ c.last_success_at|timesince }} ago{% else %}—{% endif %}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7" class="empty">{% trans "No connectors yet." %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<div class="grid g4" style="margin-top:1rem">
+  <div class="card"><h2>Wazuh</h2><div class="muted" style="font-size:.85rem">{% trans "Agents, OS/hardware inventory, vulnerability state (indexer), failed CIS/SCA checks, alert volume." %}</div></div>
+  <div class="card"><h2>OPNsense</h2><div class="muted" style="font-size:.85rem">{% trans "pkg audit vulnerabilities, firmware updates, certificate expiry, accounts without MFA, interfaces." %}</div></div>
+  <div class="card"><h2>UniFi Network</h2><div class="muted" style="font-size:.85rem">{% trans "Devices and firmware, clients, Wi-Fi security, zone firewall policies, networks/VLANs, WAN and VPN." %}</div></div>
+  <div class="card"><h2>PatchMon</h2><div class="muted" style="font-size:.85rem">{% trans "Outstanding security and package updates per host, reboot-required, agents not reporting." %}</div></div>
+</div>
+{% endblock %}
+

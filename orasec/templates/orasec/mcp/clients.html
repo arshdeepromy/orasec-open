@@ -1,0 +1,35 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Connected clients | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}
+<div class="hdr"><div><h1>{% trans "Connected clients" %}</h1>
+<div class="sub">{% trans "Assistant clients that have used OraSec as you through the connector. A client only ever has your own role and permissions. Block a client to refuse its calls at once." %}</div></div>
+<div style="display:flex;gap:.4rem" class="noprint">
+{% if request.user.is_superuser %}{% if admin_view %}<a class="btn" href="{% url 'orasec_mcp_clients' %}">{% trans "My clients" %}</a>{% else %}<a class="btn" href="{% url 'orasec_mcp_clients' %}?all=1">{% trans "Everyone's clients" %}</a>{% endif %}
+<a class="btn" href="{% url 'orasec_mcp_log' %}">{% trans "Call log" %}</a>{% endif %}
+<form method="post">{% csrf_token %}
+{% if me_blocked %}<input type="hidden" name="action" value="allow_all"><button class="btn btn-p" type="submit">{% trans "Switch my connector access on" %}</button>
+{% else %}<input type="hidden" name="action" value="block_all"><button class="btn" type="submit">{% trans "Switch my connector access off" %}</button>{% endif %}
+</form></div></div>
+
+{% if not enabled %}<div class="card" style="margin-bottom:1rem">{% trans "The connector endpoint is switched off on this OraSec." %}</div>{% endif %}
+{% if me_blocked %}<div class="card" style="margin-bottom:1rem"><span class="b b-rejected">{% trans "Off" %}</span> {% trans "Connector access is switched off for your account. No client can use OraSec as you." %}</div>{% endif %}
+
+<div class="card"><table class="t"><thead><tr>{% if admin_view %}<th>{% trans "Person" %}</th>{% endif %}<th>{% trans "Client" %}</th><th>{% trans "Signed in with" %}</th><th>{% trans "First used" %}</th><th>{% trans "Last used" %}</th><th>{% trans "Last address" %}</th><th class="num">{% trans "Calls" %}</th><th>{% trans "Status" %}</th><th></th></tr></thead><tbody>
+{% for c in clients %}<tr>{% if admin_view %}<td>{{ c.user.get_full_name|default:c.user.username }}</td>{% endif %}
+<td>{{ c.client_name|default:"—" }}</td><td>{{ c.get_kind_display }}</td><td>{{ c.first_seen|date:"j M Y H:i" }}</td><td>{{ c.last_seen|date:"j M Y H:i" }}</td><td class="mono">{{ c.last_ip|default:"—" }}</td><td class="num">{{ c.calls }}</td>
+<td>{% if c.blocked_at %}<span class="b b-rejected">{% trans "Blocked" %}</span>{% else %}<span class="b b-approved">{% trans "Allowed" %}</span>{% endif %}</td>
+<td><form method="post">{% csrf_token %}<input type="hidden" name="id" value="{{ c.id }}">
+{% if c.blocked_at %}<input type="hidden" name="action" value="allow_client"><button class="btn" type="submit">{% trans "Allow again" %}</button>
+{% else %}<input type="hidden" name="action" value="block_client"><button class="btn" type="submit">{% trans "Block" %}</button>{% endif %}</form></td></tr>
+{% empty %}<tr><td colspan="9" class="empty">{% trans "No client has connected yet." %}</td></tr>{% endfor %}</tbody></table></div>
+
+{% if admin_view and blocked_users %}<div class="card" style="margin-top:1rem"><h2>{% trans "People with connector access switched off" %}</h2><table class="t"><tbody>
+{% for a in blocked_users %}<tr><td>{{ a.user.get_full_name|default:a.user.username }}</td><td>{{ a.blocked_at|date:"j M Y H:i" }}</td>
+<td><form method="post">{% csrf_token %}<input type="hidden" name="user" value="{{ a.user_id }}"><input type="hidden" name="action" value="allow_all"><button class="btn" type="submit">{% trans "Switch on" %}</button></form></td></tr>{% endfor %}</tbody></table></div>{% endif %}
+
+<div class="card" style="margin-top:1rem"><h2>{% trans "How to connect" %}</h2>
+<div class="sub">{% trans "Add this address as a connector in your assistant client. It opens your single sign-on page; sign in with your own user name and password. To end a connection for good, block the client here and sign out of SSO." %}</div>
+<div class="mono" style="margin-top:.5rem">{{ endpoint }}</div></div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{{ a.name }} | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{{ a.name }}</h1><div class="sub">{{ a.get_asset_type_display }} · {{ a.ip_address|default:"no IP" }} · {{ a.mac_address|default:"" }} · {% trans "first seen" %} {{ a.first_seen|date:"j M Y" }}</div></div>
+<div style="display:flex;gap:.4rem">{% if a.attributes.semaphore and request.user.is_superuser %}
+<form method="post" action="{% url 'orasec_patch_deploy' a.id %}" style="display:flex;gap:.3rem;align-items:center">{% csrf_token %}
+<input type="hidden" name="next" value="{{ request.path }}"><input type="hidden" name="mode" value="apply">
+{% if a.attributes.semaphore.production %}<input name="change_ref" required placeholder="{% trans 'Change ref' %}" style="border:1px solid #ebe7de;border-radius:6px;padding:.3rem .4rem;font-size:.82rem;width:110px">{% endif %}
+<label style="font-size:.78rem"><input type="checkbox" name="confirm" value="yes" required> {% trans "confirm" %}</label>
+<button class="btn btn-p"><i class="fa-solid fa-rocket"></i> {% trans "Deploy patches" %}</button></form>{% endif %}
+<a class="btn" href="{% url 'orasec_inventory' %}">← {% trans "Inventory" %}</a></div></div>
+<div class="grid g2">
+  <div class="card"><h2>{% trans "Details" %}</h2>
+    <table class="t"><tbody>
+      <tr><td class="muted">{% trans "Operating system" %}</td><td>{{ a.os_name }} {{ a.os_version }}</td></tr>
+      <tr><td class="muted">{% trans "Vendor / model" %}</td><td>{{ a.vendor }} {{ a.model }}</td></tr>
+      <tr><td class="muted">{% trans "Firmware" %}</td><td>{{ a.firmware|default:"—" }}</td></tr>
+      <tr><td class="muted">{% trans "Sources" %}</td><td>{% for k, v in a.sources.items %}<span class="b b-muted">{{ k }}</span> <span class="muted" style="font-size:.75rem">{{ v.connector }}</span><br>{% endfor %}</td></tr>
+      <tr><td class="muted">{% trans "Parent" %}</td><td>{% if a.parent %}<a class="lk" href="{% url 'orasec_asset' a.parent.id %}">{{ a.parent.name }}</a>{% else %}—{% endif %}</td></tr>
+      <tr><td class="muted">{% trans "Children" %}</td><td>{{ a.children.count }}</td></tr>
+      <tr><td class="muted">{% trans "Last vulnerability scan" %}</td><td>{{ a.last_scanned_at|date:"j M Y H:i"|default:"never" }}</td></tr>
+    </tbody></table>
+  </div>
+  {% if form %}<form method="post" class="card f">{% csrf_token %}<h2>{% trans "Ownership & classification" %}</h2>{{ form.as_p }}<button class="btn btn-p">{% trans "Save" %}</button></form>{% endif %}
+</div>
+<div class="card" style="margin-top:1rem"><h2>{% trans "Open findings on this asset" %} ({{ findings|length }})</h2>
+<table class="t"><thead><tr><th>{% trans "Severity" %}</th><th>{% trans "Band" %}</th><th>{% trans "Finding" %}</th><th>{% trans "Tool" %}</th><th>{% trans "Due" %}</th></tr></thead><tbody>
+{% for f in findings %}<tr><td><span class="b b-{{ f.severity }}">{{ f.severity }}</span></td><td>{% if f.priority %}<span class="b b-{{ f.priority.band|cut:' ' }}">{{ f.priority.band }}</span>{% endif %}</td>
+<td><a class="lk" href="{% url 'view_finding' f.id %}">{{ f.title|truncatechars:100 }}</a>{% if f.known_exploited %} <span class="b b-kev">KEV</span>{% endif %}</td><td class="muted">{{ f.test.test_type.name }}</td><td>{{ f.priority.due_date|date:"j M Y" }}</td></tr>
+{% empty %}<tr><td colspan="5" class="empty">{% trans "No open findings." %}</td></tr>{% endfor %}</tbody></table></div>
+<div class="card" style="margin-top:1rem"><h2>{% trans "Source attributes" %}</h2><pre>{{ attrs }}</pre></div>
+{% endblock %}
+

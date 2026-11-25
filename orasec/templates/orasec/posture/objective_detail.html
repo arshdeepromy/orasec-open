@@ -1,0 +1,26 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{{ o.ref }} | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}
+<div class="hdr"><div><h1>{{ o.ref }} {{ o.title }}</h1><div class="sub"><span class="b b-{{ o.status }}">{{ o.get_status_display }}</span> · {{ o.current_value }}{% if o.last_measured %} · {% trans "measured" %} {{ o.last_measured|date:"j M Y H:i" }}{% endif %}</div></div>
+<div style="display:flex;gap:.4rem" class="noprint"><a class="btn" href="{% url 'orasec_objectives' %}">← {% trans "Objectives" %}</a>
+{% if can_update %}<form method="post" class="inline">{% csrf_token %}<input type="hidden" name="action" value="measure"><button class="btn"><i class="fa-solid fa-rotate"></i> {% trans "Measure now" %}</button></form>{% endif %}
+{% if can_compliance %}<a class="btn" href="{% url 'orasec_objective_edit' o.id %}">{% trans "Edit" %}</a>{% endif %}</div></div>
+<div class="grid g2">
+<div class="card"><h2>{% trans "Objective" %}</h2><dl class="kv">
+<dt>{% trans "Target" %}</dt><dd>{{ o.target }}</dd><dt>{% trans "Owner" %}</dt><dd>{{ o.owner.get_full_name|default:"—" }}</dd>
+<dt>{% trans "Plan" %}</dt><dd>{{ o.plan|default:"—" }}</dd><dt>{% trans "Due" %}</dt><dd>{{ o.due_date|date:"j M Y"|default:"—" }}</dd>
+<dt>{% trans "How it is measured" %}</dt><dd>{{ o.get_measure_display }}{% if o.evidence_prefix %} — {% trans "evidence titled" %} “{{ o.evidence_prefix }}…”, {% trans "within" %} {{ o.evidence_max_days }} {% trans "days" %}{% endif %}</dd>
+{% if o.notes %}<dt>{% trans "Notes" %}</dt><dd>{{ o.notes }}</dd>{% endif %}</dl></div>
+<div class="card"><h2>{% trans "Actions" %}</h2><table class="t"><thead><tr><th>{% trans "Action" %}</th><th>{% trans "Owner" %}</th><th>{% trans "Due" %}</th><th>{% trans "Status" %}</th><th></th></tr></thead><tbody>
+{% for a in actions %}<tr><td>{{ a.title }}{% if a.note %}<div class="muted" style="font-size:.75rem">{{ a.note }}</div>{% endif %}</td><td>{{ a.owner.get_full_name|default:"—" }}</td>
+<td>{% if a.overdue %}<span class="b b-overdue">{{ a.due_date|date:"j M Y" }}</span>{% else %}{{ a.due_date|date:"j M Y"|default:"—" }}{% endif %}</td>
+<td><span class="b b-{% if a.status == 'done' %}met{% elif a.status == 'dropped' %}closed{% else %}open{% endif %}">{{ a.get_status_display }}</span>{% if a.done_at %}<div class="muted" style="font-size:.72rem">{{ a.done_by.get_full_name }}, {{ a.done_at|date:"j M Y" }}</div>{% endif %}</td>
+<td class="noprint">{% if can_update or a.owner_id == uid %}<form method="post" class="inline">{% csrf_token %}<input type="hidden" name="aid" value="{{ a.id }}">
+{% if a.status == "open" %}<button class="btn" name="action" value="done">{% trans "Done" %}</button> <button class="btn" name="action" value="drop">{% trans "Drop" %}</button>{% else %}<button class="btn" name="action" value="reopen">{% trans "Reopen" %}</button>{% endif %}</form>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="5" class="empty">{% trans "No actions yet." %}</td></tr>{% endfor %}</tbody></table>
+{% if form %}<form method="post" class="f noprint" style="margin-top:.8rem">{% csrf_token %}<input type="hidden" name="action" value="add"><h2>{% trans "Add action" %}</h2>{{ form.as_p }}<button class="btn btn-p">{% trans "Add" %}</button></form>{% endif %}
+</div></div>
+{% endblock %}
+

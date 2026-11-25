@@ -1,0 +1,111 @@
+apply plugin: 'com.android.application'
+
+// One version for the whole app: mobile/package.json (see scripts/sync-native-version.mjs).
+// versionCode = MAJOR*10000 + MINOR*100 + PATCH (1.0.0 -> 10000), identical to
+// the iOS build number. The OTA updater reports the built-in bundle by
+// versionName, so it must stay on the web versioning.
+def appVersion = new groovy.json.JsonSlurper().parse(file('../../package.json')).version
+def appVersionParts = appVersion.tokenize('.').collect { it as int }
+def appVersionCode = appVersionParts[0] * 10000 + appVersionParts[1] * 100 + appVersionParts[2]
+
+// Release signing (Play upload key). The key and its passwords live OUTSIDE the
+// repo, in a private folder (chmod 700): keystore.properties + the .jks it
+// points at. Looked up in this order:
+//   1. $ORASEC_KEYSTORE_PROPERTIES
+//   2. android/keystore.properties (git-ignored; may be a symlink)
+// storeFile inside it may be absolute or relative to that properties file.
+// Without one, release builds are produced UNSIGNED (Play rejects them) and
+// debug builds are unaffected.
+def keystoreCandidates = [
+    System.getenv('ORASEC_KEYSTORE_PROPERTIES') ? new File(System.getenv('ORASEC_KEYSTORE_PROPERTIES')) : null,
+    rootProject.file('keystore.properties'),
+].findAll { it != null }
+def keystorePropsFile = keystoreCandidates.find { it.exists() }
+def keystoreProps = new Properties()
+if (keystorePropsFile != null) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+def resolveStoreFile = { String path ->
+    def f = new File(path)
+    return f.isAbsolute() ? f : new File(keystorePropsFile.parentFile, path)
+}
+
+android {
+    namespace = "nz.co.oraflows.orasec"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "nz.co.oraflows.orasec" // Play Console package name (permanent), same as the iOS bundle id
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode appVersionCode
+        versionName appVersion
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    buildFeatures {
+        buildConfig true
+    }
+    signingConfigs {
+        if (keystorePropsFile != null) {
+            release {
+                storeFile resolveStoreFile(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            // Debug builds talk to the OraSec test instance over plain HTTP (http://10.0.2.2:8180 from the emulator).
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
+        }
+        release {
+            manifestPlaceholders = [usesCleartextTraffic: "false"]
+            if (keystorePropsFile != null) {
+                signingConfig signingConfigs.release
+            }
+            // R8: shrink + obfuscate (Play's DEX-optimisation check). The
+            // mapping file is bundled into the AAB for Play's deobfuscation.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation "androidx.activity:activity:$androidxActivityVersion"
+    implementation "androidx.core:core:$androidxCoreVersion"
+    implementation "com.google.android.material:material:$materialVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+// Push notifications (Firebase Cloud Messaging). google-services.json is not in git: it comes from the Firebase
+// project (app nz.co.oraflows.orasec). Without it the app still builds and works, only without push.
+def servicesJSON = file('google-services.json')
+if (servicesJSON.exists() && servicesJSON.text) {
+    apply plugin: 'com.google.gms.google-services'
+} else {
+    logger.warn('google-services.json not found: building without push notifications')
+}

@@ -1,0 +1,45 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{% if obj %}{{ obj.name }}{% else %}New connector{% endif %} | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% if obj %}{% trans "Edit connector" %}: {{ obj.name }}{% else %}{% trans "Add connector" %}{% endif %}</h1>
+<div class="sub">{% trans "Secrets are encrypted with the instance credential key (AES-256-GCM) and never shown again." %}</div></div></div>
+{% if not obj and not form.instance.kind and not request.GET.kind %}
+<div class="grid g4">
+  {% for k, label in kinds %}
+  <a class="card" style="text-decoration:none" href="?kind={{ k }}"><h2>{{ label }}</h2><span class="lk">{% trans "Configure" %} →</span></a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="grid" style="grid-template-columns:minmax(0,640px) minmax(0,1fr)">
+<form method="post" class="card f">{% csrf_token %}
+  {{ form.as_p }}
+  <button class="btn btn-p" type="submit"><i class="fa-solid fa-floppy-disk"></i> {% trans "Save" %}</button>
+  {% if obj %}<a class="btn" href="{% url 'orasec_connector_detail' obj.id %}">{% trans "Cancel" %}</a>{% endif %}
+</form>
+<div class="card" style="font-size:.86rem;line-height:1.55">
+  <h2>{% trans "Set-up notes" %}</h2>
+  {% with k=form.instance.kind|default:request.GET.kind %}
+  {% if k == "wazuh" %}
+    <p><b>Base URL</b>: Wazuh server API, e.g. <span class="mono">https://wazuh.example.internal:55000</span>. <b>Username</b>: an API user (read-only role recommended).</p>
+    <p><b>Options</b>: <span class="mono">{"indexer_url": "https://wazuh.indexer:9200", "vuln_product": "Infrastructure hosts", "sca": true, "alerts_level": 12}</span></p>
+    <p>Secrets: API password; indexer username/password (read access to <span class="mono">wazuh-states-vulnerabilities-*</span> and <span class="mono">wazuh-alerts-*</span>).</p>
+  {% elif k == "opnsense" %}
+    <p>Create a dedicated user in <i>System → Access → Users</i> with only the pages: Dashboard, System: Firmware, System: Trust: Certificates, System: User Manager, Interfaces: Overview. Add an API key to it.</p>
+    <p><b>Username</b>: API key. <b>Secret</b>: API secret. <b>Options</b>: <span class="mono">{"asset_name": "cloud-fw", "audit": true, "cert_warn_days": 30}</span></p>
+  {% elif k == "unifi" %}
+    <p>UniFi Network → Settings → Control Plane → Integrations → <i>Create API key</i>. <b>Base URL</b>: <span class="mono">https://unifi.example.internal</span> (the console). Leave username blank.</p>
+    <p><b>Options</b>: <span class="mono">{"site": "default", "clients": true}</span></p>
+  {% elif k == "beszel" %}
+    <p><b>Base URL</b>: the Beszel hub, e.g. <span class="mono">http://beszel.example.internal:8090</span>. <b>Username</b>: a hub user's e-mail with the <b>readonly</b> role (set <span class="mono">SHARE_ALL_SYSTEMS=true</span> on the hub so it sees every machine). <b>Secret</b>: its password.</p>
+    <p>Each run adds every monitored machine to the asset inventory, so it appears on the Network Topology. Live CPU, memory, disk, network and temperature are read when the topology is open (cached a few seconds). A 15-minute interval is enough.</p>
+  {% elif k == "patchmon" %}
+    <p>PatchMon → Settings → Integrations → <i>Auto-Enrollment &amp; API</i> → New token, usage type <b>API</b>, scope <b>host:get</b> only. <b>Username</b>: token key. <b>Secret</b>: token secret.</p>
+  {% endif %}
+  {% endwith %}
+  <p class="muted">{% trans "Turn off TLS verification only for LAN appliances with self-signed certificates." %}</p>
+</div>
+</div>
+{% endif %}
+{% endblock %}
+

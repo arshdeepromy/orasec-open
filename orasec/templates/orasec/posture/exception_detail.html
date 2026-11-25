@@ -1,0 +1,28 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}{{ e.ref }} | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}
+<div class="hdr"><div><h1>{{ e.ref }} {{ e.title }}</h1><div class="sub">{{ e.get_kind_display }} · <span class="b b-{{ e.status }}">{{ e.get_status_display }}</span> ·
+{% if need %}{% blocktrans %}Approvals {{ approvals }} of {{ need }} needed{% endblocktrans %}{% else %}{% trans "A Critical risk cannot be accepted." %}{% endif %}</div></div>
+<a class="btn noprint" href="{% url 'orasec_exceptions' %}">← {% trans "Exceptions" %}</a></div>
+<div class="grid g2">
+<div class="card"><h2>{% trans "Request" %}</h2><dl class="kv">
+<dt>{% trans "Policy / clause" %}</dt><dd>{{ e.policy_ref|default:"—" }}</dd>
+{% if e.risk %}<dt>{% trans "Risk" %}</dt><dd><a class="lk" href="{% url 'orasec_risk' e.risk.id %}">{{ e.risk.ref }} {{ e.risk.title }}</a></dd>{% endif %}
+{% if e.control %}<dt>{% trans "Control" %}</dt><dd><a class="lk" href="{% url 'orasec_control' e.control.id %}">{{ e.control.ref }} {{ e.control.title }}</a></dd>{% endif %}
+{% if e.supplier %}<dt>{% trans "Supplier" %}</dt><dd><a class="lk" href="{% url 'orasec_supplier' e.supplier.id %}">{{ e.supplier.ref }} {{ e.supplier.name }}</a></dd>{% endif %}
+<dt>{% trans "Description" %}</dt><dd>{{ e.description }}</dd><dt>{% trans "Reason" %}</dt><dd>{{ e.reason|default:"—" }}</dd>
+<dt>{% trans "Compensating controls" %}</dt><dd>{{ e.compensating_controls|default:"—" }}</dd>
+<dt>{% trans "Residual risk" %}</dt><dd>L{{ e.likelihood }} × I{{ e.impact }} = <span class="b b-{{ e.band }}">{{ e.score }} {{ e.band }}</span></dd>
+<dt>{% trans "Period" %}</dt><dd>{{ e.start|date:"j M Y" }} – {{ e.expiry|date:"j M Y" }}</dd>
+<dt>{% trans "Requested by" %}</dt><dd>{{ e.requested_by.get_full_name|default:"—" }}, {{ e.requested_at|date:"j M Y" }}</dd>
+{% if e.closed_note %}<dt>{% trans "Closure note" %}</dt><dd>{{ e.closed_note }}</dd>{% endif %}</dl></div>
+<div class="card"><h2>{% trans "Decisions" %}</h2><table class="t"><tbody>{% for d in decisions %}<tr><td>{{ d.decided_by.get_full_name|default:d.decided_by }}</td><td><span class="b b-{% if d.decision == 'reject' %}rejected{% else %}approved{% endif %}">{{ d.get_decision_display }}</span></td><td>{{ d.decided_at|date:"j M Y H:i" }}</td><td>{{ d.note }}</td></tr>
+{% empty %}<tr><td class="empty">{% trans "No decisions yet." %}</td></tr>{% endfor %}</tbody></table>
+{% if form %}<form method="post" class="f" style="margin-top:.8rem">{% csrf_token %}<input type="hidden" name="action" value="decide">{{ form.as_p }}<button class="btn btn-p">{% trans "Record decision" %}</button></form>
+{% elif blocked and e.status == "requested" %}<div class="muted" style="margin-top:.6rem;font-size:.85rem">{{ blocked }}</div>{% endif %}
+{% if can_close %}<form method="post" class="f" style="margin-top:.8rem">{% csrf_token %}<input type="hidden" name="action" value="close"><p><label>{% trans "Closure note" %}</label><textarea name="note" rows="2" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"></textarea></p><button class="btn">{% trans "Close" %}</button></form>{% endif %}
+</div></div>
+{% endblock %}
+

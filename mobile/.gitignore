@@ -1,0 +1,19 @@
+# Build output (web bundle copied into the native projects by cap sync)
+dist/
+# Native secrets never live here; belt and braces:
+*.jks
+*.keystore
+keystore.properties
+GoogleService-Info.plist
+google-services.json
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# Build settings that belong to one publisher or one developer (see .env.store.example, .env.development.example)
+.env
+.env.*
+!.env.*.example

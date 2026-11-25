@@ -1,0 +1,82 @@
+import contextlib
+
+from django.conf import settings
+from django.db.models.signals import post_delete, post_save, pre_delete, pre_save
+from django.dispatch import receiver
+from django.urls import reverse
+from django.utils.translation import gettext as _
+
+from orasec.auditlog.helpers import get_delete_event_user
+from orasec.celery_dispatch import orasec_dispatch_task_on_commit
+from orasec.file_uploads.helper import delete_related_files
+from orasec.models import Engagement, Product
+from orasec.notes.helper import delete_related_notes
+from orasec.notifications.helper import async_create_notification, create_notification
+
+
+@receiver(post_save, sender=Engagement)
+def engagement_post_save(sender, instance, created, **kwargs):
+    # raw=True is set by loaddata; skip dispatch so fixture loading doesn't require a live broker.
+    if kwargs.get("raw"):
+        return
+    if created:
+        title = _('Engagement created for "%(product)s": %(name)s') % {"product": instance.product, "name": instance.name}
+        # After the COMMIT: the task loads the new engagement by id, and a worker that picks it up
+        # before the creating transaction commits finds no row and sends nothing to anyone.
+        orasec_dispatch_task_on_commit(
+            async_create_notification,
+            event="engagement_added",
+            title=title,
+            engagement_id=instance.id,
+            product_id=instance.product_id,
+            url=reverse("view_engagement", args=(instance.id,)),
+            url_api=reverse("engagement-detail", args=(instance.id,)),
+        )
+
+
+@receiver(pre_save, sender=Engagement)
+def engagement_pre_save(sender, instance, **kwargs):
+    old = sender.objects.filter(pk=instance.pk).first()
+    if old and instance.status != old.status:
+        if instance.status in {"Cancelled", "Completed"}:
+            create_notification(event="engagement_closed",
+                                title=_("Closure of %s") % instance.name,
+                                description=_('The engagement "%s" was closed') % (instance.name),
+                                engagement=instance, url=reverse("engagement_all_findings", args=(instance.id, )))
+        elif instance.status == "In Progress" and old.status != "Not Started":
+            create_notification(event="engagement_reopened",
+                                title=_("Reopening of %s") % instance.name,
+                                engagement=instance,
+                                description=_('The engagement "%s" was reopened') % (instance.name),
+                                url=reverse("view_engagement", args=(instance.id, )))
+
+
+@receiver(post_delete, sender=Engagement)
+def engagement_post_delete(sender, instance, using, origin, **kwargs):
+    # Catch instances in async delete where a single object is deleted more than once
+    with contextlib.suppress(sender.DoesNotExist, Product.DoesNotExist):
+        if instance == origin:
+            description = _('The engagement "%(name)s" was deleted') % {"name": instance.name}
+
+            if settings.ENABLE_AUDITLOG:
+                # Find deletion author in pghistory events
+                user = get_delete_event_user(instance)
+
+                # Update description with user if found
+                if user:
+                    description = _('The engagement "%(name)s" was deleted by %(user)s') % {
+                                    "name": instance.name, "user": user}
+            create_notification(event="engagement_deleted",  # template does not exists, it will default to "other" but this event name needs to stay because of unit testing
+                                title=_("Deletion of %(name)s") % {"name": instance.name},
+                                description=description,
+                                product=instance.product,
+                                url=reverse("view_product", args=(instance.product.id, )),
+                                recipients=[instance.lead],
+                                icon="exclamation-triangle")
+
+
+@receiver(pre_delete, sender=Engagement)
+def engagement_pre_delete(sender, instance, **kwargs):
+    with contextlib.suppress(sender.DoesNotExist):
+        delete_related_notes(instance)
+        delete_related_files(instance)

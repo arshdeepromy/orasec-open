@@ -1,0 +1,25 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Patch run {{ d.id }} | OraSec{% endblock %}
+{% block posture %}
+<div class="hdr"><div><h1>{% trans "Patch run" %} #{{ d.id }} — {{ d.inventory_host }}</h1>
+<div class="sub">{{ d.get_mode_display }} · {% trans "Semaphore task" %} {{ d.task_id|default:"(starting)" }} · {% trans "template" %} {{ d.template_id }} · {% trans "requested by" %} {{ d.requested_by|default:"—" }} {{ d.created|date:"j M Y H:i" }}{% if d.change_ref %} · {% trans "change" %} <span class="mono">{{ d.change_ref }}</span>{% endif %}</div></div>
+<a class="btn" href="{% url 'orasec_patch_center' %}">← {% trans "Patch Center" %}</a></div>
+<div class="grid g4">
+  <div class="card kpi"><div class="l">{% trans "Status" %}</div><div class="v"><span id="st" class="b b-{{ d.status }}" style="font-size:1rem">{{ d.get_status_display }}</span></div></div>
+  <div class="card kpi" style="grid-column:span 3"><div class="l">{% trans "Result" %}</div><div class="mono" id="sum" style="margin-top:.4rem">{{ d.summary|default:"—" }}</div></div>
+</div>
+<div class="card" style="margin-top:1rem"><h2>{% trans "Ansible output" %}</h2><pre id="out">{{ d.output|default:"Waiting for output…" }}</pre></div>
+{% if d.is_active %}
+<script>
+(function poll(){ setTimeout(async function(){
+  try { const r = await fetch('?format=json', {credentials:'same-origin'}); const j = await r.json();
+    const st=document.getElementById('st'); st.textContent=j.label; st.className='b b-'+j.status;
+    document.getElementById('sum').textContent=j.summary||'—';
+    const o=document.getElementById('out'); o.textContent=j.output||'Waiting for output…'; o.scrollTop=o.scrollHeight;
+    if (j.active) poll(); } catch(e) { poll(); }
+ }, 4000); })();
+</script>
+{% endif %}
+{% endblock %}
+

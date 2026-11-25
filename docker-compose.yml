@@ -1,0 +1,145 @@
+# This docker-compose.yml file  is fully functional to evaluate OraSec
+# in your local environment.
+#
+# Although Docker Compose is one of the supported installation methods to
+# deploy a containerized OraSec in a production environment, the
+# docker-compose.yml file is not intended for production use without first
+# customizing it to your particular situation.
+#
+---
+services:
+  nginx:
+    build:
+      context: ./
+      dockerfile: "Dockerfile.nginx-alpine"
+    image: "orasec/orasec-nginx:${ORASEC_VERSION:-1.0.0}"
+    depends_on:
+      uwsgi:
+        condition: service_started
+    environment:
+      NGINX_METRICS_ENABLED: "${NGINX_METRICS_ENABLED:-false}"
+      ORASEC_UWSGI_HOST: "${ORASEC_UWSGI_HOST:-uwsgi}"
+      ORASEC_UWSGI_PORT: "${ORASEC_UWSGI_PORT:-3031}"
+    volumes:
+      - orasec_media:/usr/share/nginx/html/media
+    ports:
+      - target: 8080
+        published: ${ORASEC_PORT:-8080}
+        protocol: tcp
+        mode: host
+      - target: 8443
+        published: ${ORASEC_TLS_PORT:-8443}
+        protocol: tcp
+        mode: host
+  uwsgi:
+    build:
+      context: ./
+      dockerfile: "Dockerfile.django-${ORASEC_OS:-alpine}"
+      target: release
+    image: "orasec/orasec-django:${ORASEC_VERSION:-1.0.0}"
+    depends_on:
+      initializer:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_started
+      valkey:
+        condition: service_started
+    entrypoint: ['/wait-for-it.sh', '${ORASEC_DATABASE_HOST:-postgres}:${ORASEC_DATABASE_PORT:-5432}', '-t', '30', '--', '/entrypoint-uwsgi.sh']
+    environment:
+      ORASEC_DEBUG: 'False'
+      ORASEC_DJANGO_METRICS_ENABLED: "${ORASEC_DJANGO_METRICS_ENABLED:-False}"
+      ORASEC_ALLOWED_HOSTS: "${ORASEC_ALLOWED_HOSTS:-*}"
+      ORASEC_DATABASE_URL: ${ORASEC_DATABASE_URL:-postgresql://orasec:orasec@postgres:5432/orasec}
+      ORASEC_CELERY_BROKER_URL: ${ORASEC_CELERY_BROKER_URL:-redis://valkey:6379/0}
+      ORASEC_CACHE_URL: ${ORASEC_CACHE_URL:-redis://valkey:6379/1}
+      ORASEC_SECRET_KEY: "${ORASEC_SECRET_KEY:?set ORASEC_SECRET_KEY in .env}"
+      ORASEC_CREDENTIAL_AES_256_KEY: "${ORASEC_CREDENTIAL_AES_256_KEY:?set ORASEC_CREDENTIAL_AES_256_KEY in .env}"
+      ORASEC_DATABASE_READINESS_TIMEOUT: "${ORASEC_DATABASE_READINESS_TIMEOUT:-30}"
+    volumes:
+        - type: bind
+          source: ./docker/extra_settings
+          target: /app/docker/extra_settings
+        - "orasec_media:${ORASEC_MEDIA_ROOT:-/app/media}"
+  celerybeat:
+    image: "orasec/orasec-django:${ORASEC_VERSION:-1.0.0}"
+    depends_on:
+      initializer:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_started
+      valkey:
+        condition: service_started
+    entrypoint: ['/wait-for-it.sh', '${ORASEC_DATABASE_HOST:-postgres}:${ORASEC_DATABASE_PORT:-5432}', '-t', '30', '--', '/entrypoint-celery-beat.sh']
+    environment:
+      ORASEC_DATABASE_URL: ${ORASEC_DATABASE_URL:-postgresql://orasec:orasec@postgres:5432/orasec}
+      ORASEC_CELERY_BROKER_URL: ${ORASEC_CELERY_BROKER_URL:-redis://valkey:6379/0}
+      ORASEC_CACHE_URL: ${ORASEC_CACHE_URL:-redis://valkey:6379/1}
+      ORASEC_SECRET_KEY: "${ORASEC_SECRET_KEY:?set ORASEC_SECRET_KEY in .env}"
+      ORASEC_CREDENTIAL_AES_256_KEY: "${ORASEC_CREDENTIAL_AES_256_KEY:?set ORASEC_CREDENTIAL_AES_256_KEY in .env}"
+      ORASEC_DATABASE_READINESS_TIMEOUT: "${ORASEC_DATABASE_READINESS_TIMEOUT:-30}"
+    volumes:
+        - type: bind
+          source: ./docker/extra_settings
+          target: /app/docker/extra_settings
+  celeryworker:
+    image: "orasec/orasec-django:${ORASEC_VERSION:-1.0.0}"
+    depends_on:
+      initializer:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_started
+      valkey:
+        condition: service_started
+    entrypoint: ['/wait-for-it.sh', '${ORASEC_DATABASE_HOST:-postgres}:${ORASEC_DATABASE_PORT:-5432}', '-t', '30', '--', '/entrypoint-celery-worker.sh']
+    environment:
+      ORASEC_DATABASE_URL: ${ORASEC_DATABASE_URL:-postgresql://orasec:orasec@postgres:5432/orasec}
+      ORASEC_CELERY_BROKER_URL: ${ORASEC_CELERY_BROKER_URL:-redis://valkey:6379/0}
+      ORASEC_CACHE_URL: ${ORASEC_CACHE_URL:-redis://valkey:6379/1}
+      ORASEC_SECRET_KEY: "${ORASEC_SECRET_KEY:?set ORASEC_SECRET_KEY in .env}"
+      ORASEC_CREDENTIAL_AES_256_KEY: "${ORASEC_CREDENTIAL_AES_256_KEY:?set ORASEC_CREDENTIAL_AES_256_KEY in .env}"
+      ORASEC_DATABASE_READINESS_TIMEOUT: "${ORASEC_DATABASE_READINESS_TIMEOUT:-30}"
+    volumes:
+        - type: bind
+          source: ./docker/extra_settings
+          target: /app/docker/extra_settings
+        - "orasec_media:${ORASEC_MEDIA_ROOT:-/app/media}"
+  initializer:
+    image: "orasec/orasec-django:${ORASEC_VERSION:-1.0.0}"
+    depends_on:
+      postgres:
+        condition: service_started
+    entrypoint: ['/wait-for-it.sh', '${ORASEC_DATABASE_HOST:-postgres}:${ORASEC_DATABASE_PORT:-5432}', '--', '/entrypoint-initializer.sh']
+    environment:
+      ORASEC_DATABASE_URL: ${ORASEC_DATABASE_URL:-postgresql://orasec:orasec@postgres:5432/orasec}
+      ORASEC_ADMIN_USER: "${ORASEC_ADMIN_USER:-admin}"
+      ORASEC_ADMIN_MAIL: "${ORASEC_ADMIN_USER:-admin@orasec.local}"
+      ORASEC_ADMIN_FIRST_NAME: "${ORASEC_ADMIN_FIRST_NAME:-Admin}"
+      ORASEC_ADMIN_LAST_NAME: "${ORASEC_ADMIN_LAST_NAME:-User}"
+      ORASEC_INITIALIZE: "${ORASEC_INITIALIZE:-true}"
+      ORASEC_SECRET_KEY: "${ORASEC_SECRET_KEY:?set ORASEC_SECRET_KEY in .env}"
+      ORASEC_CREDENTIAL_AES_256_KEY: "${ORASEC_CREDENTIAL_AES_256_KEY:?set ORASEC_CREDENTIAL_AES_256_KEY in .env}"
+      ORASEC_DATABASE_READINESS_TIMEOUT: "${ORASEC_DATABASE_READINESS_TIMEOUT:-30}"
+    volumes:
+        - type: bind
+          source: ./docker/extra_settings
+          target: /app/docker/extra_settings
+  postgres:
+    image: postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+    environment:
+      PGDATA: /var/lib/postgresql/data
+      POSTGRES_DB: ${ORASEC_DATABASE_NAME:-orasec}
+      POSTGRES_USER: ${ORASEC_DATABASE_USER:-orasec}
+      POSTGRES_PASSWORD: ${ORASEC_DATABASE_PASSWORD:?set ORASEC_DATABASE_PASSWORD in .env}
+    volumes:
+      - orasec_postgres:/var/lib/postgresql/data
+  valkey:
+    image: valkey/valkey:9.1.2-alpine@sha256:48332870af354a799964c0012ae1194a0bf2bf894eb508f945810596dc2d8d11
+    volumes:
+      # we keep using the redis volume as renaming is not possible and copying data over
+      # would require steps during downtime or complex commands in the intializer
+      - orasec_redis:/data
+volumes:
+  orasec_postgres: {}
+  orasec_media: {}
+  orasec_redis: {}
+

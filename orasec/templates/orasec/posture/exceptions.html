@@ -1,0 +1,14 @@
+{% extends "orasec/posture/_base.html" %}
+{% load i18n %}
+{% block title %}Exceptions | OraSec{% endblock %}
+{% block posture %}
+{% include "orasec/posture/_grc_styles.html" %}
+<div class="hdr"><div><h1>{% trans "Exceptions & Risk Acceptances" %}</h1><div class="sub">{% trans "POL-002 sections 4.7 and 10 (REG-003). Policy exceptions: two people who are not the requester, at most 90 days. Risk acceptances by residual band; a Critical risk cannot be accepted." %}</div></div>
+<div style="display:flex;gap:.4rem" class="noprint"><a class="btn" href="{% url 'orasec_grc' %}">{% trans "GRC Dashboard" %}</a>
+{% if can_request %}<a class="btn btn-p" href="{% url 'orasec_exception_new' %}"><i class="fa-solid fa-plus"></i> {% trans "Request" %}</a>{% endif %}</div></div>
+<div class="card"><table class="t"><thead><tr><th>Ref</th><th>{% trans "Type" %}</th><th>{% trans "Title" %}</th><th>{% trans "Policy / risk" %}</th><th class="num">{% trans "Residual" %}</th><th>{% trans "Requested by" %}</th><th>{% trans "Expiry" %}</th><th>{% trans "Status" %}</th></tr></thead><tbody>
+{% for e in items %}<tr><td class="mono">{{ e.ref }}</td><td>{{ e.get_kind_display }}</td><td><a class="lk" href="{% url 'orasec_exception' e.id %}">{{ e.title }}</a></td><td>{{ e.policy_ref|default:"" }}{% if e.risk %} {{ e.risk.ref }}{% endif %}</td>
+<td class="num"><span class="b b-{{ e.band }}">{{ e.score }}</span></td><td>{{ e.requested_by.get_full_name|default:"—" }}</td><td>{{ e.expiry|date:"j M Y" }}</td><td><span class="b b-{{ e.status }}">{{ e.get_status_display }}</span></td></tr>
+{% empty %}<tr><td colspan="8" class="empty">{% trans "No exceptions or risk acceptances." %}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}
+

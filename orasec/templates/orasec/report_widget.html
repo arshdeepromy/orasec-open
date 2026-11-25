@@ -1,0 +1,21 @@
+{% load i18n %}
+<div class="panel panel-available-widget" data-multiple="{{ multiple }}">
+    <div class="panel-heading" title="{% trans 'Click and drag to move' %}" data-toggle="tooltip">
+        <div class="clearfix">
+            <h5 class="pull-left">{% if title == "Report Options" %}<i class="fa-solid fa-sliders os-card-icon" aria-hidden="true"></i>{% elif title == "Cover Page" %}<i class="fa-solid fa-file os-card-icon" aria-hidden="true"></i>{% elif title == "Table Of Contents" %}<i class="fa-solid fa-list-ol os-card-icon" aria-hidden="true"></i>{% else %}<i class="fa-solid fa-pen-to-square os-card-icon" aria-hidden="true"></i>{% endif %}{{ title }}</h5>
+            <span class="fa-solid fa-arrows-up-down-left-right pull-right icon"></span>
+        </div>
+    </div>
+    <div class="panel-body">
+        {% if extra_help %}
+            <div class="alert alert-info" role="alert">
+                {{ extra_help }}
+            </div>
+        {% endif %}
+        <form id="{{ title|slugify }}" class="">
+            <fieldset>
+                {% include "orasec/form_fields.html" with form=form %}
+            </fieldset>
+        </form>
+    </div>
+</div>

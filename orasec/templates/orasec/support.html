@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block content %}
+    {{ block.super }}
+    <div class="max-w-5xl mx-auto py-6 space-y-6">
+        <header>
+            <h1 class="text-2xl font-semibold text-gray-900">{% trans "OraSec support" %}</h1>
+            <p class="mt-2 text-gray-600">
+                {% blocktrans trimmed %}
+                    OraSec is your organisation's own security platform. It is self-hosted and run by your
+                    security team &mdash; it does not receive or install updates from any vendor.
+                {% endblocktrans %}
+            </p>
+        </header>
+
+        <section class="grid gap-4 md:grid-cols-3">
+            <div class="rounded-lg border border-gray-200 bg-white p-5">
+                <h2 class="font-semibold text-gray-900"><i class="fa-solid fa-envelope fa-fw text-teal-600"></i> {% trans "Security team" %}</h2>
+                <p class="mt-2 text-sm text-gray-600">{% trans "Access requests, triage questions, risk acceptances and incidents." %}</p>
+                <p class="mt-3 text-sm">{% if SECURITY_CONTACT %}<a class="text-os-interactive-700 hover:underline" href="mailto:{{ SECURITY_CONTACT }}">{{ SECURITY_CONTACT }}</a>{% else %}{% trans "Ask your OraSec administrator." %}{% endif %}</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-white p-5">
+                <h2 class="font-semibold text-gray-900"><i class="fa-solid fa-book fa-fw text-teal-600"></i> {% trans "Documentation" %}</h2>
+                <p class="mt-2 text-sm text-gray-600">{% trans "How OraSec is built, deployed and operated, plus connector set-up guides." %}</p>
+                <p class="mt-3 text-sm"><a class="text-os-interactive-700 hover:underline" href="{{ DOCUMENTATION_URL }}" target="_blank" rel="noopener">{% trans "Open the OraSec docs" %}</a></p>
+            </div>
+            <div class="rounded-lg border border-gray-200 bg-white p-5">
+                <h2 class="font-semibold text-gray-900"><i class="fa-solid fa-code-branch fa-fw text-teal-600"></i> {% trans "Change requests" %}</h2>
+                <p class="mt-2 text-sm text-gray-600">{% trans "Bugs and feature requests are raised as issues in the OraSec repository." %}</p>
+                <p class="mt-3 text-sm"><a class="text-os-interactive-700 hover:underline" href="{{ ISSUES_URL|default:'https://github.com/arshdeepromy/orasec-open/issues' }}" target="_blank" rel="noopener">{% trans "OraSec issues" %}</a></p>
+            </div>
+        </section>
+
+        <section class="rounded-lg border border-gray-200 bg-white p-5">
+            <h2 class="font-semibold text-gray-900">{% trans "Where things are" %}</h2>
+            <ul class="mt-3 space-y-2 text-sm text-gray-700 list-disc pl-5">
+                <li>{% trans "Connector status, last runs and errors" %}: <a class="text-os-interactive-700 hover:underline" href="/orasec/diagnostics/">{% trans "Diagnostics" %}</a></li>
+                <li>{% trans "ISO/IEC 27001:2022 controls, Statement of Applicability and evidence" %}: <a class="text-os-interactive-700 hover:underline" href="/orasec/compliance/">{% trans "Compliance" %}</a></li>
+                <li>{% trans "Posture score, daily brief and insights" %}: <a class="text-os-interactive-700 hover:underline" href="/orasec/command-center/">{% trans "Command Center" %}</a></li>
+            </ul>
+        </section>
+    </div>
+{% endblock %}
+
